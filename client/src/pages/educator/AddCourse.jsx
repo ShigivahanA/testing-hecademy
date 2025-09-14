@@ -17,7 +17,8 @@ const AddCourse = () => {
   const [discount, setDiscount] = useState(0)
   const [image, setImage] = useState(null)
   const [chapters, setChapters] = useState([]);
-  const [tags, setTags] = useState([]) // ✅ NEW
+  const [tags, setTags] = useState([]) 
+  const [difficulty, setDifficulty] = useState("beginner") // ✅ NEW
   const [showPopup, setShowPopup] = useState(false);
   const [currentChapterId, setCurrentChapterId] = useState(null);
   const [lectureDetails, setLectureDetails] = useState({
@@ -104,7 +105,8 @@ const AddCourse = () => {
         coursePrice: Number(coursePrice),
         discount: Number(discount),
         courseContent: chapters,
-        tags // ✅ added
+        tags,
+        difficulty // ✅ include difficulty
       }
 
       const formData = new FormData()
@@ -125,6 +127,7 @@ const AddCourse = () => {
         setDiscount(0)
         setImage(null)
         setTags([])
+        setDifficulty("beginner") // ✅ reset
         setChapters([])
         quillRef.current.root.innerHTML = ""
       } else {
@@ -178,6 +181,21 @@ const AddCourse = () => {
           />
         </div>
 
+        {/* Difficulty */}
+        <div className='flex flex-col gap-1'>
+          <p>Difficulty</p>
+          <select
+            value={difficulty}
+            onChange={e => setDifficulty(e.target.value)}
+            className='outline-none md:py-2.5 py-2 px-3 rounded border border-gray-500'
+            required
+          >
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+
         {/* Price + Thumbnail */}
         <div className='flex items-center justify-between flex-wrap'>
           <div className='flex flex-col gap-1'>
@@ -223,7 +241,7 @@ const AddCourse = () => {
           />
         </div>
 
-        {/* Chapters + Lectures UI (same as yours) */}
+        {/* Chapters & Lectures */}
         <div>
           {chapters.map((chapter, chapterIndex) => (
             <div key={chapterIndex} className="bg-white border rounded-lg mb-4">
@@ -241,7 +259,11 @@ const AddCourse = () => {
                 <div className="p-4">
                   {chapter.chapterContent.map((lecture, lectureIndex) => (
                     <div key={lectureIndex} className="flex justify-between items-center mb-2">
-                      <span>{lectureIndex + 1} {lecture.lectureTitle} - {lecture.lectureDuration} mins - <a href={lecture.lectureUrl} target="_blank" className="text-blue-500">Link</a> - {lecture.isPreviewFree ? 'Free Preview' : 'Paid'}</span>
+                      <span>
+                        {lectureIndex + 1} {lecture.lectureTitle} - {lecture.lectureDuration} mins - 
+                        <a href={lecture.lectureUrl} target="_blank" className="text-blue-500">Link</a> - 
+                        {lecture.isPreviewFree ? 'Free Preview' : 'Paid'}
+                      </span>
                       <img onClick={() => handleLecture('remove', chapter.chapterId, lectureIndex)} src={assets.cross_icon} alt="" className='cursor-pointer' />
                     </div>
                   ))}

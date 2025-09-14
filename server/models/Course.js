@@ -41,8 +41,8 @@ const courseSchema = new mongoose.Schema({
             ref: 'User'
         }
     ],
-    tags: [String], 
-    difficulty: { type: String, required: true }
+    tags: { type: String, required: true }, 
+    difficulty: { type: String, required: true, enum: ["beginner", "intermediate", "advanced"] }
 }, { timestamps: true, minimize: false });
 
 const Course = mongoose.model('Course', courseSchema);

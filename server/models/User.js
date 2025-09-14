@@ -11,6 +11,18 @@ const userSchema = new mongoose.Schema({
             ref: 'Course'
         }
     ],
+    preferences: {
+    topics: [String],      
+    difficulty: String,    
+    goals: [String]        
+  },
+  activityLog: [
+    {
+      courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
+      action: String,   
+      timestamp: { type: Date, default: Date.now }
+    }
+  ]
 }, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);

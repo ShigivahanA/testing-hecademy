@@ -17,6 +17,7 @@ export const AppContextProvider = (props) => {
     const { user } = useUser()
 
     const [showLogin, setShowLogin] = useState(false)
+    const [recommendations, setRecommendations] = useState([]);
     const [isEducator,setIsEducator] = useState(false)
     const [allCourses, setAllCourses] = useState([])
     const [userData, setUserData] = useState(null)
@@ -145,6 +146,20 @@ export const AppContextProvider = (props) => {
         }
     }, [user])
 
+    const fetchRecommendations = async () => {
+  try {
+    const token = await getToken()
+    const { data } = await axios.get(backendUrl + "/api/recommendation/user", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (data.success) {
+      setRecommendations(data.recommended)
+    }
+  } catch (error) {
+    toast.error(error.message)
+  }
+}
+
     const value = {
         showLogin, setShowLogin,
         backendUrl, currency, navigate,
@@ -153,8 +168,9 @@ export const AppContextProvider = (props) => {
         enrolledCourses, fetchUserEnrolledCourses,
         calculateChapterTime, calculateCourseDuration,
         calculateRating, calculateNoOfLectures,
-        isEducator,setIsEducator
+        isEducator,setIsEducator, recommendations, fetchRecommendations
     }
+
 
     return (
         <AppContext.Provider value={value}>

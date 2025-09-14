@@ -146,12 +146,13 @@ export const AppContextProvider = (props) => {
         }
     }, [user])
 
-    const fetchRecommendations = async () => {
+const fetchRecommendations = async () => {
   try {
     const token = await getToken()
-    const { data } = await axios.get(backendUrl + "/api/recommendation/user", {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    const { data } = await axios.get(
+      backendUrl + "/api/recommendations/user",  
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
     if (data.success) {
       setRecommendations(data.recommended)
     }

@@ -205,11 +205,20 @@ export const addUserRating = async (req, res) => {
     }
 };
 
-// Update User Preferences
 export const updateUserPreferences = async (req, res) => {
   try {
-    const userId = req.auth.userId
+    // Clerk injects user info via middleware
+    const userId = req.auth?.userId
+    if (!userId) {
+      return res.json({ success: false, message: "Unauthorized" })
+    }
+
     const { topics, difficulty, goals } = req.body
+
+    // Validate
+    if (!topics?.length && !difficulty && !goals?.length) {
+      return res.json({ success: false, message: "No preferences provided" })
+    }
 
     const user = await User.findByIdAndUpdate(
       userId,
@@ -217,7 +226,9 @@ export const updateUserPreferences = async (req, res) => {
       { new: true }
     )
 
-    if (!user) return res.json({ success: false, message: "User not found" })
+    if (!user) {
+      return res.json({ success: false, message: "User not found" })
+    }
 
     res.json({ success: true, message: "Preferences updated", user })
   } catch (error) {

@@ -15,9 +15,9 @@ import course_3_thumbnail from './course_3.png'
 import course_4_thumbnail from './course_4.png'
 import star from './rating_star.svg'
 import star_blank from './star_dull_icon.svg'
-import profile_img_1 from './profile_img_1.png'
-import profile_img_2 from './profile_img_2.png'
-import profile_img_3 from './profile_img_3.png'
+import profile_img_1 from './profile_img_1.webp'
+import profile_img_2 from './profile_img_2.webp'
+import profile_img_3 from './profile_img_3.webp'
 import arrow_icon from './arrow_icon.svg'
 import down_arrow_icon from './down_arrow_icon.svg'
 import time_left_clock_icon from './time_left_clock_icon.svg'
@@ -93,25 +93,25 @@ export const assets = {
 
 export const dummyTestimonial = [
     {
-        name: 'Donald Jackman',
-        role: 'SWE 1 @ Amazon',
-        image: assets.profile_img_1,
+        name: 'Charan Vivek Raj R',
+        role: 'Engineer @ TCS',
+        image: assets.profile_img_3,
         rating: 5,
-        feedback: 'I\'ve been using Imagify for nearly two years, primarily for Instagram, and it has been incredibly user-friendly, making my work much easier.',
+        feedback: 'I’ve been learning with Hecademy for over a year, and the personalized course recommendations have been a game changer, helping me stay consistent and motivated.',
     },
     {
-        name: 'Richard Nelson',
-        role: 'SWE 2 @ Samsung',
+        name: 'Shigivahan A',
+        role: 'Student',
         image: assets.profile_img_2,
         rating: 4,
-        feedback: 'I\'ve been using Imagify for nearly two years, primarily for Instagram, and it has been incredibly user-friendly, making my work much easier.',
+        feedback: 'Hecademy has made skill-building so much easier for me, with interactive lessons and guidance that really adapts to how I learn best.',
     },
     {
-        name: 'James Washington',
-        role: 'SWE 2 @ Google',
-        image: assets.profile_img_3,
+        name: 'Jaianandakrishnaa K',
+        role: 'Engineer @ Capgemini',
+        image: assets.profile_img_1,
         rating: 4.5,
-        feedback: 'I\'ve been using Imagify for nearly two years, primarily for Instagram, and it has been incredibly user-friendly, making my work much easier.',
+        feedback: 'The platform is simple to use, and the flexibility to learn at my own pace has made Hecademy an essential part of my personal and career growth.',
     },
 ];
 

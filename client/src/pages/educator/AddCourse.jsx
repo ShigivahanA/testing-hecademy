@@ -7,7 +7,6 @@ import axios from 'axios'
 import { AppContext } from '../../context/AppContext';
 
 const AddCourse = () => {
-
   const editorRef = useRef(null);
   const quillRef = useRef(null);
 
@@ -18,6 +17,7 @@ const AddCourse = () => {
   const [discount, setDiscount] = useState(0)
   const [image, setImage] = useState(null)
   const [chapters, setChapters] = useState([]);
+  const [tags, setTags] = useState([]) // ✅ NEW
   const [showPopup, setShowPopup] = useState(false);
   const [currentChapterId, setCurrentChapterId] = useState(null);
   const [lectureDetails, setLectureDetails] = useState({
@@ -92,11 +92,10 @@ const AddCourse = () => {
 
   const handleSubmit = async (e) => {
     try {
-
       e.preventDefault();
 
       if (!image) {
-        toast.error('Thumbnail Not Selected')
+        return toast.error('Thumbnail Not Selected')
       }
 
       const courseData = {
@@ -105,6 +104,7 @@ const AddCourse = () => {
         coursePrice: Number(coursePrice),
         discount: Number(discount),
         courseContent: chapters,
+        tags // ✅ added
       }
 
       const formData = new FormData()
@@ -112,8 +112,9 @@ const AddCourse = () => {
       formData.append('image', image)
 
       const token = await getToken()
-
-      const { data } = await axios.post(backendUrl + '/api/educator/add-course', formData,
+      const { data } = await axios.post(
+        backendUrl + '/api/educator/add-course',
+        formData,
         { headers: { Authorization: `Bearer ${token}` } }
       )
 
@@ -123,20 +124,18 @@ const AddCourse = () => {
         setCoursePrice(0)
         setDiscount(0)
         setImage(null)
+        setTags([])
         setChapters([])
         quillRef.current.root.innerHTML = ""
-      } else (
+      } else {
         toast.error(data.message)
-      )
-
+      }
     } catch (error) {
       toast.error(error.message)
     }
-
   };
 
   useEffect(() => {
-    // Initiate Quill only once
     if (!quillRef.current && editorRef.current) {
       quillRef.current = new Quill(editorRef.current, {
         theme: 'snow',
@@ -144,51 +143,95 @@ const AddCourse = () => {
     }
   }, []);
 
-  useEffect(() => {
-    console.log(chapters);
-  }, [chapters]);
-
   return (
     <div className='h-screen overflow-scroll flex flex-col items-start justify-between md:p-8 md:pb-0 p-4 pt-8 pb-0'>
       <form onSubmit={handleSubmit} className='flex flex-col gap-4 max-w-md w-full text-gray-500'>
+        
+        {/* Title */}
         <div className='flex flex-col gap-1'>
           <p>Course Title</p>
-          <input onChange={e => setCourseTitle(e.target.value)} value={courseTitle} type="text" placeholder='Type here' className='outline-none md:py-2.5 py-2 px-3 rounded border border-gray-500' required />
+          <input
+            onChange={e => setCourseTitle(e.target.value)}
+            value={courseTitle}
+            type="text"
+            placeholder='Type here'
+            className='outline-none md:py-2.5 py-2 px-3 rounded border border-gray-500'
+            required
+          />
         </div>
 
+        {/* Description */}
         <div className='flex flex-col gap-1'>
           <p>Course Description</p>
           <div ref={editorRef}></div>
         </div>
 
+        {/* Tags */}
+        <div className='flex flex-col gap-1'>
+          <p>Tags (comma separated)</p>
+          <input
+            type="text"
+            value={tags.join(",")}
+            onChange={e => setTags(e.target.value.split(",").map(t => t.trim()))}
+            placeholder="e.g. React, JavaScript, Frontend"
+            className='outline-none md:py-2.5 py-2 px-3 rounded border border-gray-500'
+          />
+        </div>
+
+        {/* Price + Thumbnail */}
         <div className='flex items-center justify-between flex-wrap'>
           <div className='flex flex-col gap-1'>
             <p>Course Price</p>
-            <input onChange={e => setCoursePrice(e.target.value)} value={coursePrice} type="number" placeholder='0' className='outline-none md:py-2.5 py-2 w-28 px-3 rounded border border-gray-500' required />
-          </ div>
+            <input
+              onChange={e => setCoursePrice(e.target.value)}
+              value={coursePrice}
+              type="number"
+              placeholder='0'
+              className='outline-none md:py-2.5 py-2 w-28 px-3 rounded border border-gray-500'
+              required
+            />
+          </div>
 
           <div className='flex md:flex-row flex-col items-center gap-3'>
             <p>Course Thumbnail</p>
             <label htmlFor='thumbnailImage' className='flex items-center gap-3'>
               <img src={assets.file_upload_icon} alt="" className='p-3 bg-blue-500 rounded' />
-              <input type="file" id='thumbnailImage' onChange={e => setImage(e.target.files[0])} accept="image/*" hidden />
+              <input
+                type="file"
+                id='thumbnailImage'
+                onChange={e => setImage(e.target.files[0])}
+                accept="image/*"
+                hidden
+              />
               <img className='max-h-10' src={image ? URL.createObjectURL(image) : ''} alt="" />
             </label>
           </div>
         </div>
 
+        {/* Discount */}
         <div className='flex flex-col gap-1'>
           <p>Discount %</p>
-          <input onChange={e => setDiscount(e.target.value)} value={discount} type="number" placeholder='0' min={0} max={100} className='outline-none md:py-2.5 py-2 w-28 px-3 rounded border border-gray-500' required />
+          <input
+            onChange={e => setDiscount(e.target.value)}
+            value={discount}
+            type="number"
+            placeholder='0'
+            min={0}
+            max={100}
+            className='outline-none md:py-2.5 py-2 w-28 px-3 rounded border border-gray-500'
+            required
+          />
         </div>
 
-        {/* Adding Chapters & Lectures */}
+        {/* Chapters + Lectures UI (same as yours) */}
         <div>
           {chapters.map((chapter, chapterIndex) => (
             <div key={chapterIndex} className="bg-white border rounded-lg mb-4">
               <div className="flex justify-between items-center p-4 border-b">
                 <div className="flex items-center">
-                  <img className={`mr-2 cursor-pointer transition-all ${chapter.collapsed && "-rotate-90"} `} onClick={() => handleChapter('toggle', chapter.chapterId)} src={assets.dropdown_icon} width={14} alt="" />
+                  <img className={`mr-2 cursor-pointer transition-all ${chapter.collapsed && "-rotate-90"} `}
+                    onClick={() => handleChapter('toggle', chapter.chapterId)}
+                    src={assets.dropdown_icon} width={14} alt="" />
                   <span className="font-semibold">{chapterIndex + 1} {chapter.chapterTitle}</span>
                 </div>
                 <span className="text-gray-500">{chapter.chapterContent.length} Lectures</span>

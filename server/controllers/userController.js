@@ -204,3 +204,23 @@ export const addUserRating = async (req, res) => {
         return res.json({ success: false, message: error.message });
     }
 };
+
+// Update User Preferences
+export const updateUserPreferences = async (req, res) => {
+  try {
+    const userId = req.auth.userId
+    const { topics, difficulty, goals } = req.body
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { preferences: { topics, difficulty, goals } },
+      { new: true }
+    )
+
+    if (!user) return res.json({ success: false, message: "User not found" })
+
+    res.json({ success: true, message: "Preferences updated", user })
+  } catch (error) {
+    res.json({ success: false, message: error.message })
+  }
+}

@@ -13,7 +13,7 @@ const TestimonialsSection = () => {
         {dummyTestimonial.map((testimonial, index) => (
           <div
             key={index}
-            className="text-sm text-left  border border-gray-500/30 pb-6 rounded-lg bg-white shadow-[0px_4px_15px_0px] shadow-black/5 overflow-hidden"
+            className="text-sm text-left  border-[0.5px] border-gray-400 pb-6 rounded-xl bg-white hover:-translate-y-1 duration-500 hover:shadow-[4px_4px_0_#000] overflow-hidden"
           >
             <div className="flex items-center gap-4 px-5 py-4 bg-gray-500/10">
               <img className="h-12 w-12 rounded-full" src={testimonial.image} alt={testimonial.name} />
@@ -35,9 +35,9 @@ const TestimonialsSection = () => {
               </div>
               <p className="text-gray-500 mt-5">{testimonial.feedback}</p>
             </div>
-            <a href="#" className="text-blue-500 underline px-5">
+            {/* <a href="#" className="text-blue-500 underline px-5">
               Read more
-            </a>
+            </a> */}
           </div>
         ))}
       </div>

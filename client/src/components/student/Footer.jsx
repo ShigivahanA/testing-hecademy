@@ -14,8 +14,8 @@ const Footer = () => {
         </div>
 
         <div className="flex flex-col md:items-start items-center w-full">
-          <h2 className="font-semibold text-white mb-5">Company</h2>
-          <ul className="flex md:flex-col w-full justify-between text-sm text-white/80 md:space-y-2">
+          <h2 className="font-semibold text-white mb-5">Quick Links</h2>
+          <ul className="flex md:flex-col w-full justify-between text-sm text-white/80 md:space-y-2 underline">
             <li><a href="#">Home</a></li>
             <li><a href="#">About us</a></li>
             <li><a href="#">Contact us</a></li>

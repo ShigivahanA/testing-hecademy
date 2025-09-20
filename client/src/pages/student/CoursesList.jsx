@@ -5,7 +5,7 @@ import CourseCard from '../../components/student/CourseCard'
 import { AppContext } from '../../context/AppContext'
 import { useParams } from 'react-router-dom'
 import SearchBar from '../../components/student/SearchBar'
-import axios from 'axios'
+import Loading from '../../components/student/Loading'
 
 const CoursesList = () => {
   const { input } = useParams()
@@ -13,26 +13,38 @@ const CoursesList = () => {
 
   const [filteredCourse, setFilteredCourse] = useState([])
   const [recommended, setRecommended] = useState([])
+  const [loading, setLoading] = useState(true) // 👈 added loading state
 
   // ✅ Filter course list based on search input
   useEffect(() => {
     if (allCourses && allCourses.length > 0) {
       const tempCourses = allCourses.slice()
-      input
-        ? setFilteredCourse(
-            tempCourses.filter(item =>
-              item.courseTitle.toLowerCase().includes(input.toLowerCase())
-            )
+      const updated = input
+        ? tempCourses.filter(item =>
+            item.courseTitle.toLowerCase().includes(input.toLowerCase())
           )
-        : setFilteredCourse(tempCourses)
+        : tempCourses
+
+      setFilteredCourse(updated)
+
+      // ⏳ keep loader visible for 2 seconds
+      const timer = setTimeout(() => {
+        setLoading(false)
+      }, 1500)
+
+      return () => clearTimeout(timer)
     }
   }, [allCourses, input])
 
   useEffect(() => {
-  if (fetchRecommendations) {
-    fetchRecommendations()
+    if (fetchRecommendations) {
+      fetchRecommendations()
+    }
+  }, [fetchRecommendations])
+
+  if (loading) {
+    return <Loading /> // 👈 show loading first
   }
-}, [])
 
   return (
     <>
@@ -64,18 +76,16 @@ const CoursesList = () => {
           </div>
         )}
 
-            {recommendations && recommendations.length > 0 && (
-            <div className="my-16">
-                <h2 className="text-2xl font-semibold mb-6 text-gray-800">Recommended for You</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-2 md:p-0">
-                {recommendations.map((course, index) => (
-                    <CourseCard key={course._id || index} course={course} />
-                ))}
-                </div>
+        {recommendations && recommendations.length > 0 && (
+          <div className="my-16">
+            <h2 className="text-2xl font-semibold mb-6 text-gray-800">Recommended for You</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-2 md:p-0">
+              {recommendations.map((course, index) => (
+                <CourseCard key={course._id || index} course={course} />
+              ))}
             </div>
-            )}
-
-
+          </div>
+        )}
 
         {/* ✅ Normal Course List */}
         <div className="my-16">

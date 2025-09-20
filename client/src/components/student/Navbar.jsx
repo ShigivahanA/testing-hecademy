@@ -41,7 +41,14 @@ const Navbar = () => {
   }
 
   return (
-    <div className={`flex items-center justify-between px-4 sm:px-10 md:px-14 lg:px-36 border-b border-gray-500 py-4 ${isCoursesListPage ? 'bg-white' : 'bg-cyan-100/70'}`}>
+     <div
+    className={`max-w-screen-xl mx-auto flex items-center justify-between px-6 sm:px-10 md:px-14 lg:px-20 py-4 
+    rounded-lg shadow-md transition-all duration-300
+    ${isCoursesListPage 
+      ? 'bg-white backdrop-blur-md border border-gray-200' 
+      : 'bg-cyan-100/70 backdrop-blur-md border border-gray-200'
+    }`}
+  >
       <img onClick={() => navigate('/')} src={assets.logo} alt="Logo" className="w-28 lg:w-32 cursor-pointer" />
       <div className="md:flex hidden items-center gap-5 text-gray-500">
         <div className="flex items-center gap-5">
@@ -54,7 +61,7 @@ const Navbar = () => {
         </div>
         {user
           ? <UserButton />
-          : <button onClick={() => openSignIn()} className="bg-blue-600 text-white px-5 py-2 rounded-full">
+          : <button onClick={() => openSignIn()} className="bg-blue-600 text-white px-5 py-2 rounded-full border-[0.5px] border-gray-400 hover:-translate-x-2 duration-500 hover:shadow-[4px_4px_0_#000]">
             Create Account
           </button>}
       </div>

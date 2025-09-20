@@ -7,10 +7,10 @@ const CallToAction = () => {
       <h1 className='md:text-4xl text-xl text-gray-800 font-semibold'>Learn Anything. Anytime. Your Way.</h1>
       <p className='text-gray-500 sm:text-sm'>With Hecademy, you’re in control of your learning. Whether you’re a beginner or advancing your career, access flexible courses built around your strengths, interests, and schedule.</p>
       <div className='flex items-center font-medium gap-6 mt-4'>
-        <button className='px-10 py-3 rounded-md text-white bg-blue-600'>Get started</button>
-        <button className='flex items-center gap-2'>
-          Learn more
-          <img src={assets.arrow_icon} alt="arrow_icon" />
+        <button className='px-10 py-3 rounded-xl text-white bg-blue-600 border-[0.5px] border-gray-400 hover:-translate-x-1 duration-500 hover:shadow-[4px_4px_0_#000]'>Get started</button>
+        <button className='flex items-center gap-2 hover:text-blue-600'>
+          Learn more →
+          {/* <img src={assets.arrow_icon} alt="arrow_icon" /> */}
         </button>
       </div>
     </div>

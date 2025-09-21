@@ -19,8 +19,9 @@ const Home = () => {
   }, [userData])
 
   return (
+    <>
+    {showModal && <PreferenceModal onClose={() => setShowModal(false)} />}
     <div className="flex flex-col items-center space-y-7 text-center">
-      {showModal && <PreferenceModal onClose={() => setShowModal(false)} />}
       <Hero />
       <Companies />
       <CoursesSection />
@@ -28,6 +29,7 @@ const Home = () => {
       <CallToAction />
       <Footer />
     </div>
+    </>
   );
 };
 

@@ -2,6 +2,7 @@ import React, { useState, useContext } from "react";
 import axios from "axios";
 import { AppContext } from "../../context/AppContext";
 import { toast } from "react-toastify";
+import { assets } from "../../assets/assets"; // ✅ topics & goals list
 
 const PreferenceModal = ({ onClose }) => {
   const { backendUrl, getToken, setUserData } = useContext(AppContext);
@@ -32,68 +33,124 @@ const PreferenceModal = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-lg text-left relative">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50 px-4 ">
+      <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl w-full max-w-md md:max-w-lg text-left relative overflow-hidden p-5 md:p-6 rounded-b-xl">
+        
+        {/* Header */}
+        <h2 className="text-lg md:text-xl font-semibold text-white px-6 py-4 text-center">
           Set Your Learning Preferences
         </h2>
 
-        {/* Topics */}
-        <label className="block mb-2 text-sm font-medium text-gray-700">
-          Topics (comma separated)
-        </label>
-        <input
-          type="text"
-          className="w-full border p-2 mb-4 rounded focus:ring-2 focus:ring-blue-400"
-          placeholder="e.g. React, Python, UI/UX"
-          onChange={(e) =>
-            setTopics(e.target.value.split(",").map((t) => t.trim()))
-          }
-        />
-
-        {/* Difficulty */}
-        <label className="block mb-2 text-sm font-medium text-gray-700">
-          Difficulty
-        </label>
-        <select
-          className="w-full border p-2 mb-4 rounded focus:ring-2 focus:ring-blue-400"
-          onChange={(e) => setDifficulty(e.target.value)}
-        >
-          <option value="">Select...</option>
-          <option value="beginner">Beginner</option>
-          <option value="intermediate">Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
-
-        {/* Goals */}
-        <label className="block mb-2 text-sm font-medium text-gray-700">
-          Goals (comma separated)
-        </label>
-        <input
-          type="text"
-          className="w-full border p-2 mb-6 rounded focus:ring-2 focus:ring-blue-400"
-          placeholder="e.g. Career growth, Exam prep, Hobby learning"
-          onChange={(e) =>
-            setGoals(e.target.value.split(",").map((g) => g.trim()))
-          }
-        />
-
-        {/* Buttons */}
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
+        {/* Content Area */}
+        {/* <div className="bg-gradient-to-br from-blue-500 to-cyan-400 "> */}
+          
+          {/* Topics */}
+          <label className="text-white block mb-2 text-sm font-medium text-gray-700">
+            Topics
+          </label>
+          <select
+            className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-black mb-2 text-sm md:text-base"
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value && !topics.includes(value)) {
+                setTopics([...topics, value]);
+              }
+              e.target.value = ""; // reset after selection
+            }}
           >
-            Skip
-          </button>
-          <button
-            onClick={savePreferences}
-            className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+            <option value="">Select a topic...</option>
+            {assets.topics?.map((topic, i) => (
+              <option key={i} value={topic}>
+                {topic}
+              </option>
+            ))}
+          </select>
+
+          {topics.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2 max-h-24 overflow-y-auto p-2 border rounded-xl bg-gray-50">
+              {topics.map((topic, i) => (
+                <div
+                  key={i}
+                  className="flex items-center bg-cyan-100 text-cyan-800 border border-cyan-300 px-3 py-1 rounded-full shadow-sm text-xs md:text-sm"
+                >
+                  <span className="mr-2">{topic}</span>
+                  <button
+                    className="text-cyan-600 hover:text-red-500 font-bold"
+                    onClick={() => setTopics(topics.filter((t) => t !== topic))}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Difficulty */}
+          <label className="text-white block mt-4 mb-2 text-sm font-medium text-gray-700">
+            Difficulty
+          </label>
+          <select
+            className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-black mb-2 text-sm md:text-base"
+            onChange={(e) => setDifficulty(e.target.value)}
           >
-            Save
-          </button>
+            <option value="">Select...</option>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+
+          {/* Goals */}
+          <label className="text-white block mt-4 mb-2 text-sm font-medium text-gray-700">
+            Goals
+          </label>
+          <select
+            className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-black mb-2 text-sm md:text-base"
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value && !goals.includes(value)) {
+                setGoals([...goals, value]);
+              }
+              e.target.value = ""; // reset after selection
+            }}
+          >
+            <option value="">Select a goal...</option>
+            {assets.goals?.map((goal, i) => (
+              <option key={i} value={goal}>
+                {goal}
+              </option>
+            ))}
+          </select>
+
+          {goals.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2 max-h-24 overflow-y-auto p-2 border rounded-xl bg-gray-50">
+              {goals.map((goal, i) => (
+                <div
+                  key={i}
+                  className="flex items-center bg-cyan-100 text-cyan-800 border border-cyan-300 px-3 py-1 rounded-full shadow-sm text-xs md:text-sm"
+                >
+                  <span className="mr-2">{goal}</span>
+                  <button
+                    className="text-cyan-600 hover:text-red-500 font-bold"
+                    onClick={() => setGoals(goals.filter((g) => g !== goal))}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="flex justify-end mt-6">
+            <button
+              onClick={savePreferences}
+              className="px-5 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-medium shadow hover:opacity-90 transition text-sm md:text-base"
+            >
+              Save
+            </button>
+          </div>
         </div>
-      </div>
+      {/* </div> */}
     </div>
   );
 };

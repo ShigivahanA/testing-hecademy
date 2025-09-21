@@ -104,7 +104,7 @@ const CourseDetails = () => {
           <h1 className="md:text-course-deatails-heading-large text-course-deatails-heading-small font-semibold text-gray-800">
             {courseData.courseTitle}
           </h1>
-          <p className="pt-4 md:text-base text-sm" dangerouslySetInnerHTML={{ __html: courseData.courseDescription.slice(0, 200) }}>
+          <p className="pt-4 md:text-base text-sm" dangerouslySetInnerHTML={{__html: courseData.courseDescription.split(".")[0] + "."}}>
           </p>
 
           <div className='flex items-center space-x-2 pt-3 pb-1 text-sm'>

@@ -1,16 +1,24 @@
-import { useEffect } from "react";
+import { useEffect,useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { assets } from "../../assets/assets";
+import { assets, motivationalLines } from "../../assets/assets";
 
 const Loading = () => {
   const { path } = useParams();
   const navigate = useNavigate();
+  const [line, setLine] = useState("");
+
+  useEffect(() => {
+    if (motivationalLines.length > 0) {
+      const randomIndex = Math.floor(Math.random() * motivationalLines.length);
+      setLine(motivationalLines[randomIndex]);
+    }
+  }, []);
 
   useEffect(() => {
     if (path) {
       const timer = setTimeout(() => {
         navigate(`/${path}`);
-      }, 5000);
+      }, 2000);
       return () => clearTimeout(timer);
     }
   }, [path, navigate]);
@@ -22,6 +30,9 @@ const Loading = () => {
         alt="Book flipping animation"
         className="w-28 h-20 sm:w-36 sm:h-28 object-contain drop-shadow-lg animate-pulse"
       />
+      <p className="text-gray-700 text-lg sm:text-xl font-medium text-center max-w-md">
+        {line}
+      </p>
       <style>
         {`
           @keyframes progress {

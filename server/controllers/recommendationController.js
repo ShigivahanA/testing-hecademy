@@ -13,7 +13,11 @@ export const getRecommendations = async (req, res) => {
     const allCourses = await Course.find({ isPublished: true });
 
     // 2. Build user keywords (preferences + enrolled course tags)
-    let keywords = [...(user.preferences?.topics || [])];
+    let keywords = [
+      ...(user.preferences?.topics || []),
+      ...(user.preferences?.goals || []),
+      user.preferences?.difficulty || ""
+    ];
     user.enrolledCourses.forEach(c => {
       keywords.push(c.courseTitle, ...(c.tags || []));
     });
@@ -21,7 +25,14 @@ export const getRecommendations = async (req, res) => {
     // 3. TF-IDF similarity
     const TfIdf = natural.TfIdf;
     const tfidf = new TfIdf();
-    allCourses.forEach(c => tfidf.addDocument(c.courseTitle + " " + c.courseDescription));
+    allCourses.forEach(c => {
+      const docText = [
+        c.courseTitle,
+        c.courseDescription,
+        ...(c.tags || []) // ✅ include tags
+      ].join(" ");
+      tfidf.addDocument(docText);
+    });
 
     const scores = allCourses.map((c, idx) => ({
       course: c,
@@ -29,15 +40,13 @@ export const getRecommendations = async (req, res) => {
     }));
 
     // 4. Sort & filter out already enrolled
-        const recommended = scores
-      // only keep courses with some similarity
-      .filter(s => s.score > 0)
-      // exclude already enrolled
-      .filter(s => !user.enrolledCourses.map(ec => ec._id.toString()).includes(s.course._id.toString()))
-      // sort highest score first
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10)
-      .map(s => s.course);
+      const recommended = scores
+        .filter(s => s.score > 0) // ✅ only real matches
+        .filter(s => !user.enrolledCourses.map(ec => ec._id.toString()).includes(s.course._id.toString()))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10)
+        .map(s => s.course);
+
 
     // If no matches found, send empty recommendations
     if (recommended.length === 0) {

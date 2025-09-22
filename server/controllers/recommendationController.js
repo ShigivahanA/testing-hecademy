@@ -29,13 +29,20 @@ export const getRecommendations = async (req, res) => {
     }));
 
     // 4. Sort & filter out already enrolled
-    const recommended = scores
+        const recommended = scores
+      // only keep courses with some similarity
       .filter(s => s.score > 0)
+      // exclude already enrolled
       .filter(s => !user.enrolledCourses.map(ec => ec._id.toString()).includes(s.course._id.toString()))
+      // sort highest score first
       .sort((a, b) => b.score - a.score)
       .slice(0, 10)
       .map(s => s.course);
 
+    // If no matches found, send empty recommendations
+    if (recommended.length === 0) {
+      return res.json({ success: true, recommended: [] });
+    }
 
     res.json({ success: true, recommended });
   } catch (err) {

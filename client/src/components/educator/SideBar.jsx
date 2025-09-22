@@ -23,7 +23,7 @@ const SideBar = () => {
           end={item.path === '/educator'} // Add end prop for the Dashboard link
           className={({ isActive }) =>
             `flex items-center md:flex-row flex-col md:justify-start justify-center py-3.5 md:px-10 gap-3 ${isActive
-              ? 'bg-indigo-50 border-r-[6px] border-indigo-500/90'
+              ? 'bg-cyan-100/70 border-r-[6px] border-purple-800/50'
               : 'hover:bg-gray-100/90 border-r-[6px] border-white hover:border-gray-100/90'
             }`
           }

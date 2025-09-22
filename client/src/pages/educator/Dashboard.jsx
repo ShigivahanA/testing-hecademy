@@ -39,51 +39,6 @@ const Dashboard = () => {
 
   }, [isEducator])
 
-  const studentsData = [
-    {
-      id: 1,
-      name: 'Richard Sanford',
-      profileImage: assets.profile_img,
-      courseTitle: 'Build Text to Image SaaS App in React JS',
-      date: '22 Aug, 2024'
-    },
-    {
-      id: 2,
-      name: 'Enrique Murphy',
-      profileImage: assets.profile_img2,
-      courseTitle: 'Build Text to Image SaaS App in React JS',
-      date: '22 Aug, 2024'
-    },
-    {
-      id: 3,
-      name: 'Alison Powell',
-      profileImage: assets.profile_img3,
-      courseTitle: 'Build Text to Image SaaS App in React JS',
-      date: '22 Aug, 2024'
-    },
-    {
-      id: 4,
-      name: 'Richard Sanford',
-      profileImage: assets.profile_img,
-      courseTitle: 'Build Text to Image SaaS App in React JS',
-      date: '22 Aug, 2024'
-    },
-    {
-      id: 5,
-      name: 'Enrique Murphy',
-      profileImage: assets.profile_img2,
-      courseTitle: 'Build Text to Image SaaS App in React JS',
-      date: '22 Aug, 2024'
-    },
-    {
-      id: 6,
-      name: 'Alison Powell',
-      profileImage: assets.profile_img3,
-      courseTitle: 'Build Text to Image SaaS App in React JS',
-      date: '22 Aug, 2024'
-    }
-  ];
-
 
   return dashboardData ? (
     <div className='min-h-screen flex flex-col items-start justify-between gap-8 md:p-8 md:pb-0 p-4 pt-8 pb-0'>
@@ -113,7 +68,7 @@ const Dashboard = () => {
         </div>
         <div>
           <h2 className="pb-4 text-lg font-medium">Latest Enrolments</h2>
-          <div className="flex flex-col items-center max-w-4xl w-full overflow-hidden rounded-md bg-white border border-gray-500/20">
+          <div className="flex flex-col items-center max-w-4xl w-full overflow-hidden rounded-md bg-white border border-gray-500/20 mb-5">
             <table className="table-fixed md:table-auto w-full overflow-hidden">
               <thead className="text-gray-900 border-b border-gray-500/20 text-sm text-left">
                 <tr>

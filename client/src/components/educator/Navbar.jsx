@@ -15,7 +15,7 @@ const Navbar = ({ bgColor }) => {
         <img src={assets.logo} alt="Logo" className="w-28 lg:w-32" />
       </Link>
       <div className="flex items-center gap-5 text-gray-500 relative">
-        <p>Hi! {user.fullName}</p>
+        <p>Welcome back, Educator <span className='text-gray-700 font-medium'>{user.fullName}</span></p>
         <UserButton />
       </div>
     </div>

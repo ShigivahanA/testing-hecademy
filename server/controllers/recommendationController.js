@@ -13,11 +13,7 @@ export const getRecommendations = async (req, res) => {
     const allCourses = await Course.find({ isPublished: true });
 
     // 2. Build user keywords (preferences + enrolled course tags)
-    let keywords = [
-      ...(user.preferences?.topics || []),
-      ...(user.preferences?.goals || []),
-      user.preferences?.difficulty || ""
-    ];
+    let keywords = [...(user.preferences?.topics || [])];
     user.enrolledCourses.forEach(c => {
       keywords.push(c.courseTitle, ...(c.tags || []));
     });

@@ -15,42 +15,20 @@ export const getRecommendations = async (req, res) => {
     // 2. Build user keywords (preferences + enrolled course tags)
     let keywords = [...(user.preferences?.topics || [])];
     user.enrolledCourses.forEach(c => {
-      keywords.push(c.courseTitle, ...(c.tags || []));
+      keywords.push(...(c.tags || []));
     });
 
-    // 3. TF-IDF similarity
-    const TfIdf = natural.TfIdf;
-    const tfidf = new TfIdf();
-    allCourses.forEach(c => {
-      const docText = [
-        c.courseTitle,
-        c.courseDescription,
-        ...(c.tags || []) // ✅ include tags
-      ].join(" ");
-      tfidf.addDocument(docText);
-    });
+    const recommended = allCourses.filter(c => {
+          const courseTags = c.tags || [];
+          return courseTags.some(tag =>
+            keywords.map(k => k.toLowerCase()).includes(tag.toLowerCase())
+          );
+        })
+        .filter(c => !user.enrolledCourses.map(ec => ec._id.toString()).includes(c._id.toString())) // remove enrolled
+        .slice(0, 10); // limit results
 
-    const scores = allCourses.map((c, idx) => ({
-      course: c,
-      score: tfidf.tfidf(keywords.join(" "), idx)
-    }));
-
-    // 4. Sort & filter out already enrolled
-      const recommended = scores
-        .filter(s => s.score > 0) // ✅ only real matches
-        .filter(s => !user.enrolledCourses.map(ec => ec._id.toString()).includes(s.course._id.toString()))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 10)
-        .map(s => s.course);
-
-
-    // If no matches found, send empty recommendations
-    if (recommended.length === 0) {
-      return res.json({ success: true, recommended: [] });
-    }
-
-    res.json({ success: true, recommended });
-  } catch (err) {
-    res.json({ success: false, message: err.message });
-  }
-};
+        res.json({ success: true, recommended });
+      } catch (err) {
+        res.json({ success: false, message: err.message });
+      }
+    };

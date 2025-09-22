@@ -169,9 +169,28 @@ const CourseDetails = () => {
 
         <div className="max-w-course-card z-10 shadow-custom-card rounded-t md:rounded-none overflow-hidden bg-white min-w-[300px] sm:min-w-[420px]">
           {
-            playerData
-              ? <YouTube videoId={playerData.videoId} opts={{ playerVars: { autoplay: 1 } }} iframeClassName='w-full aspect-video' />
-              : <img src={courseData.courseThumbnail} alt="" />
+           playerData
+                      ? (
+                        <YouTube
+                            videoId={playerData.videoId}
+                            opts={{ playerVars: { autoplay: 1 } }}
+                            iframeClassName="w-full aspect-video"
+                            onReady={(event) => {
+                              const player = event.target;
+                              let intervalId = setInterval(() => {
+                                if (player.getCurrentTime && player.getCurrentTime() >= 180) { // 3 mins
+                                  player.pauseVideo();
+                                  toast.info("⏳ Preview limit reached! Enroll to watch full lecture.");
+
+                                  clearInterval(intervalId); // ✅ stop interval
+                                  setPlayerData(null);       // ✅ reset preview -> show thumbnail again
+                                }
+                              }, 1000);
+                            }}
+                          />
+                      )
+                      : <img src={courseData.courseThumbnail} alt="" />
+
           }
           <div className="p-5">
             <div className="flex items-center gap-2">

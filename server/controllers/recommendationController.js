@@ -14,9 +14,6 @@ export const getRecommendations = async (req, res) => {
 
     // 2. Build user keywords (preferences + enrolled course tags)
     let keywords = [...(user.preferences?.topics || [])];
-    user.enrolledCourses.forEach(c => {
-      keywords.push(...(c.tags || []));
-    });
 
     let recommended = allCourses.filter(c => {
       const courseTags = c.tags || [];

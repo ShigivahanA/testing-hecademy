@@ -76,16 +76,23 @@ const CoursesList = () => {
           </div>
         )}
 
-        {recommendations && recommendations.length > 0 && (
-          <div className="my-16">
-            <h2 className="text-2xl font-semibold mb-6 text-gray-800">
-              {recommendations.fallback ? "Courses Popular Amongst Learners" : "Recommended for You"}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-2 md:p-0">
-              {recommendations.map((course, index) => (
-                <CourseCard key={course._id || index} course={course} />
-              ))}
-            </div>
+{recommendations && (
+  <div className="my-16">
+    <h2 className="text-2xl font-semibold mb-6 text-gray-800">
+      Recommended for You
+    </h2>
+
+            {recommendations.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-2 md:p-0">
+                {recommendations.map((course, index) => (
+                  <CourseCard key={course._id || index} course={course} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 italic">
+                No recommended courses based on your interests
+              </p>
+            )}
           </div>
         )}
 

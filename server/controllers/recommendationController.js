@@ -1,6 +1,5 @@
 import User from "../models/User.js";
 import Course from "../models/Course.js";
-import natural from "natural";  // TF-IDF (lightweight)
 
 export const getRecommendations = async (req, res) => {
   try {
@@ -15,6 +14,7 @@ export const getRecommendations = async (req, res) => {
     // 2. Build user keywords (preferences + enrolled course tags)
     let keywords = [...(user.preferences?.topics || [])];
 
+    // 3. Filter courses by tags
     let recommended = allCourses.filter(c => {
       const courseTags = c.tags || [];
       return courseTags.some(tag =>
@@ -24,19 +24,16 @@ export const getRecommendations = async (req, res) => {
       !user.enrolledCourses.map(ec => ec._id.toString()).includes(c._id.toString())
     );
 
-    // 4. If no matches, fallback to popular courses (by enrollment count)
+    // 4. If no matches, return empty with message
     if (recommended.length === 0) {
-      const popularCourses = await Course.find({ isPublished: true })
-        .sort({ enrollmentCount: -1 }) // ✅ needs enrollmentCount field in Course model
-        .limit(10);
-
       return res.json({
         success: true,
-        recommended: popularCourses,
-        fallback: true, // 👈 flag so frontend can show "Popular amongst learners"
+        recommended: [],
+        message: "No recommended courses based on your interests"
       });
     }
 
+    // 5. Return recommendations
     res.json({ success: true, recommended, fallback: false });
   } catch (err) {
     res.json({ success: false, message: err.message });

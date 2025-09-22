@@ -89,8 +89,9 @@ const CoursesList = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 italic">
-                No recommended courses based on your interests
+              <p className="text-gray-500 text-lg">
+                No recommended courses based on your interests. Please explore
+                our course list.
               </p>
             )}
           </div>

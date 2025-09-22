@@ -30,10 +30,12 @@ export const getRecommendations = async (req, res) => {
 
     // 4. Sort & filter out already enrolled
     const recommended = scores
+      .filter(s => s.score > 0)
       .filter(s => !user.enrolledCourses.map(ec => ec._id.toString()).includes(s.course._id.toString()))
       .sort((a, b) => b.score - a.score)
       .slice(0, 10)
       .map(s => s.course);
+
 
     res.json({ success: true, recommended });
   } catch (err) {

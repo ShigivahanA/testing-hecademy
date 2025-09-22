@@ -35,9 +35,16 @@ const Footer = () => {
         </div>
 
       </div>
-      <p className="py-4 text-center text-xs md:text-sm text-white/60">
-        Copyright 2025 © Hecademy. All Right Reserved.
-      </p>
+      <div className="py-4 text-center text-xs md:text-sm text-white/60 flex flex-col md:flex-row justify-center items-center gap-1">
+        <p>Copyright 2025 © Hecademy. All Rights Reserved.</p>
+        <span className="hidden md:inline-block mx-2">|</span>
+        <p>
+          Created with <span className='text-white font-medium'>❤️</span> by{" "}
+          <span className="text-white font-medium">Jaianandakrishnaa K</span>,{" "}
+          <span className="text-white font-medium">Shigivahan A</span>, and{" "}
+          <span className="text-white font-medium">Charan Vivek Raj R</span>
+        </p>
+      </div>
     </footer>
   );
 };

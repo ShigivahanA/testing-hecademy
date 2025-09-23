@@ -96,7 +96,7 @@ export const userEnrolledCourses = async (req, res) => {
         const userData = await User.findById(userId)
             .populate('enrolledCourses')
 
-        const pendingCourses = purchases
+        const pendingCourses = Purchase
             .filter(p => p.status === "pending" && !completedCourseIds.includes(p.courseId.toString()))
             .map(p => ({
                 courseId: p.courseId,

@@ -1,7 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { assets } from '../../assets/assets';
+import { motion } from 'motion/react';
 
 const Footer = () => {
+
+  const [result, setResult] = useState("");
+
+  // Auto clear result after 5s
+  setTimeout(() => {
+    setResult("");
+  }, 5000);
+
+  const onSubscribe = async (event) => {
+    event.preventDefault();
+    setResult("Subscribing...");
+    const formData = new FormData(event.target);
+
+    // Add Web3Forms access key
+    formData.append("access_key", "1f07a246-8e45-494d-9e60-ceb5c03925fc");
+
+    const response = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      setResult("Subscribed successfully 🎉");
+      event.target.reset();
+    } else {
+      console.log("Error", data);
+      setResult("Something went wrong. Try again!");
+    }
+  };
   return (
     <footer className="bg-black md:px-36 text-left w-full mt-10">
       <div className="flex flex-col md:flex-row items-start px-8 md:px-0 justify-center gap-10 md:gap-32 py-10 border-b border-white/30">
@@ -23,15 +55,48 @@ const Footer = () => {
           </ul>
         </div>
 
-        <div className="hidden md:flex flex-col items-start w-full">
-          <h2 className="font-semibold text-white mb-5">Subscribe to our newsletter</h2>
+        <div
+          className="flex flex-col items-start w-full"
+        >
+          <h2 className="font-semibold text-white mb-5">
+            Subscribe to our newsletter
+          </h2>
           <p className="text-sm text-white/80">
             The latest news, articles, and resources, sent to your inbox weekly.
           </p>
-          <div className="flex items-center gap-2 pt-4">
-            <input className="border border-gray-500/30 bg-gray-800 text-gray-500 placeholder-gray-500 outline-none w-64 h-9 rounded px-2 text-sm" type="email" placeholder="Enter your email" />
-            <button className="bg-blue-600 w-24 h-9 text-white rounded">Subscribe</button>
-          </div>
+          <form
+            onSubmit={onSubscribe}
+            className="flex items-center gap-2 pt-4 w-full"
+          >
+            <input
+              className="flex-1 border border-gray-500/30 bg-gray-800 text-gray-200 placeholder-gray-500 outline-none h-9 rounded px-3 text-sm"
+              type="email"
+              placeholder="Enter your email"
+              name="email"
+              required
+            />
+            <button
+              type="submit"
+              className="bg-blue-600 w-28 h-9 text-white rounded"
+            >
+              Subscribe
+            </button>
+          </form>
+
+          {/* Subscribe result */}
+          {result && (
+            <p
+              className={`mt-3 text-sm font-medium transition duration-500 ${
+                result.includes("success")
+                  ? "text-green-500"
+                  : result.includes("Subscribing")
+                  ? "text-blue-400 animate-pulse"
+                  : "text-red-500"
+              }`}
+            >
+              {result}
+            </p>
+          )}
         </div>
 
       </div>

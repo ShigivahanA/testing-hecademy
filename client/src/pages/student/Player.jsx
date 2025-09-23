@@ -43,16 +43,19 @@ const Player = ({ }) => {
 
 
   useEffect(() => {
+  if (!userData) return; 
     if (enrolledCourses.length > 0) {
-      getCourseData()
+      getCourseData();
     }
-  }, [enrolledCourses])
+  }, [enrolledCourses, userData])
+  
 
   const markLectureAsCompleted = async (lectureId) => {
 
-    try {
-
-      const token = await getToken()
+      if (!userData) return;
+          try {
+            const token = await getToken();
+            if (!token) return;
 
       const { data } = await axios.post(backendUrl + '/api/user/update-course-progress',
         { courseId, lectureId },
@@ -74,9 +77,10 @@ const Player = ({ }) => {
 
   const getCourseProgress = async () => {
 
+    if (!userData) return; // 👈 stop if logged out
     try {
-
-      const token = await getToken()
+      const token = await getToken();
+      if (!token) return; 
 
       const { data } = await axios.post(backendUrl + '/api/user/get-course-progress',
         { courseId },
@@ -97,9 +101,10 @@ const Player = ({ }) => {
 
   const handleRate = async (rating) => {
 
-    try {
-
-      const token = await getToken()
+      if (!userData) return;
+        try {
+          const token = await getToken();
+          if (!token) return;
 
       const { data } = await axios.post(backendUrl + '/api/user/add-rating',
         { courseId, rating },
@@ -118,11 +123,33 @@ const Player = ({ }) => {
     }
   }
 
-  useEffect(() => {
+    useEffect(() => {
+        if (userData) {
+          getCourseProgress();
+        }
+      }, [userData])
 
-    getCourseProgress()
+      if (!userData) {
+  return (
+    <>
+      <div className="md:px-36 px-8 pt-10">
+        <h1 className="text-2xl font-semibold">Course Player</h1>
+        <p className="text-center mt-20 text-gray-500">
+          Please log in to watch your courses.
+        </p>
+      </div>
+      <Footer />
+    </>
+  )
+}
 
-  }, [])
+if (!courseData) {
+  return (
+    <div className="flex justify-center items-center h-screen">
+      <p className="text-gray-500">Course not found or not enrolled.</p>
+    </div>
+  )
+}
 
   return courseData ? (
     <>

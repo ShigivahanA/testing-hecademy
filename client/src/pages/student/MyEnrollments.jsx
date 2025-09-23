@@ -11,8 +11,10 @@ const MyEnrollments = () => {
     const [progressArray, setProgressData] = useState([])
 
     const getCourseProgress = async () => {
+    if (!userData) return; // 👈 stop if logged out
         try {
             const token = await getToken();
+            if (!token) return;
 
             // Use Promise.all to handle multiple async operations
             const tempProgressArray = await Promise.all(
@@ -38,18 +40,32 @@ const MyEnrollments = () => {
     };
 
     useEffect(() => {
-        if (userData) {
-            fetchUserEnrolledCourses()
-        }
-    }, [userData])
+    if (userData) {
+        fetchUserEnrolledCourses();
+    }
+  }, [userData])
 
     useEffect(() => {
 
-        if (enrolledCourses.length > 0) {
-            getCourseProgress()
-        }
+        if (userData && enrolledCourses.length > 0) {
+        getCourseProgress();
+    }
+  }, [enrolledCourses, userData])
 
-    }, [enrolledCourses])
+    if (!userData) {
+  return (
+    <>
+      <div className="md:px-36 px-8 pt-10">
+        <h1 className="text-2xl font-semibold">My Enrollments</h1>
+        <p className="text-center mt-10 text-gray-500">
+          Please log in to view your enrollments.
+        </p>
+      </div>
+      <Footer />   {/* ✅ Now full-width like in the normal return */}
+    </>
+  )
+}
+
 
     return (
         <>

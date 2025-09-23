@@ -9,18 +9,25 @@ import { AppContext } from '../../context/AppContext';
 import PreferenceModal from '../../components/student/PreferenceModal';
 
 const Home = () => {
-  const { userData } = useContext(AppContext)
+  const { userData, isEducator } = useContext(AppContext)
   const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
-    if (userData && (!userData.preferences || !userData.preferences.topics?.length)) {
+    // ✅ Only show preference modal for learners, not educators
+    if (
+      userData && 
+      !isEducator && 
+      (!userData.preferences || !userData.preferences.topics?.length)
+    ) {
       setShowModal(true)
     }
-  }, [userData])
+  }, [userData, isEducator])
 
   return (
     <>
-    {showModal && <PreferenceModal onClose={() => setShowModal(false)} />}
+    {showModal && !isEducator && (
+        <PreferenceModal onClose={() => setShowModal(false)} />
+      )}
     <div className="flex flex-col items-center space-y-7 text-center">
       <Hero />
       <Companies />

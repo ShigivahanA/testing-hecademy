@@ -7,18 +7,20 @@ import { AppContext } from '../../context/AppContext';
 import { toast } from 'react-toastify';
 import humanizeDuration from 'humanize-duration'
 import YouTube from 'react-youtube';
-import { useAuth } from '@clerk/clerk-react';
+import { useAuth, useUser } from '@clerk/clerk-react';
 import Loading from '../../components/student/Loading';
 
 const CourseDetails = () => {
 
   const { id } = useParams()
+  const { user } = useUser();
+
 
   const [courseData, setCourseData] = useState(null)
   const [playerData, setPlayerData] = useState(null)
   const [isAlreadyEnrolled, setIsAlreadyEnrolled] = useState(false)
 
-  const { backendUrl, currency, userData, calculateChapterTime, calculateCourseDuration, calculateRating, calculateNoOfLectures } = useContext(AppContext)
+  const { backendUrl, currency, userData, calculateChapterTime, calculateCourseDuration, calculateRating, calculateNoOfLectures, isEducator, } = useContext(AppContext)
   const { getToken } = useAuth()
 
 
@@ -63,6 +65,9 @@ const CourseDetails = () => {
       if (isAlreadyEnrolled) {
         return toast.warn('Already Enrolled')
       }
+      if (isEducator) {
+              return toast.warn('Already Enrolled')
+            }
 
       const token = await getToken();
 
@@ -221,9 +226,14 @@ const CourseDetails = () => {
                 <p>{calculateNoOfLectures(courseData)} lessons</p>
               </div>
             </div>
-            <button onClick={enrollCourse} className="md:mt-6 mt-4 w-full py-3 rounded bg-blue-600 text-white font-medium">
-              {isAlreadyEnrolled ? "Already Enrolled" : "Enroll Now"}
-            </button>
+            {!isEducator && (
+              <button
+                onClick={enrollCourse}
+                className="md:mt-6 mt-4 w-full py-3 rounded bg-blue-600 text-white font-medium"
+              >
+                {isAlreadyEnrolled ? "Already Enrolled" : "Enroll Now"}
+              </button>
+              )}
             <div className="pt-6">
               <p className="md:text-xl text-lg font-medium text-gray-800">What's in the course?</p>
               <ul className="ml-4 pt-2 text-sm md:text-default list-disc text-gray-500">

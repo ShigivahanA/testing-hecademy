@@ -9,7 +9,7 @@ import Loading from '../../components/student/Loading'
 
 const CoursesList = () => {
   const { input } = useParams()
-  const { allCourses, navigate, backendUrl, userData, recommendations, fetchRecommendations } = useContext(AppContext)
+  const { allCourses, navigate, backendUrl, userData, recommendations, fetchRecommendations, isEducator } = useContext(AppContext)
 
   const [filteredCourse, setFilteredCourse] = useState([])
   const [recommended, setRecommended] = useState([])
@@ -76,7 +76,7 @@ const CoursesList = () => {
           </div>
         )}
         {/* ✅ Recommendations Only if User is Logged In */}
-        {userData ? (
+        {userData & !isEducator ? (
           recommendations && (
             <div className="my-16">
               <h2 className="text-2xl font-semibold mb-6 text-gray-800">
@@ -101,7 +101,7 @@ const CoursesList = () => {
         {/* ✅ Normal Course List */}
         <div className="my-16">
           <h2 className="text-2xl font-semibold mb-6 text-gray-800">
-            {userData ? "Courses You Might Like" : "Courses in Hecademy"}
+            {userData & !isEducator ? "Courses You Might Like" : "Courses in Hecademy"}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-2 md:p-0">
             {filteredCourse.map((course, index) => (

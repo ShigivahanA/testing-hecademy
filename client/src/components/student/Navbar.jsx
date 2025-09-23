@@ -58,10 +58,11 @@ const Navbar = () => {
             {isEducator &&( 
               <>
               <button onClick={becomeEducator}>Educator Dashboard</button>
-              <span className='mx-2'> | </span>
               </>
+            )}{!isEducator && (
+              <Link to='/my-enrollments' >My Enrollments</Link>
             )}
-            <Link to='/my-enrollments' >My Enrollments</Link>
+            
             </>
             )
           }

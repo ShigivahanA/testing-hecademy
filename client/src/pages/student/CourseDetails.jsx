@@ -97,10 +97,11 @@ const CourseDetails = () => {
 
   return courseData ? (
     <>
-      <div className="flex md:flex-row flex-col-reverse gap-10 relative items-start justify-between md:px-36 px-8 md:pt-20 pt-10 text-left">
+    <div className="relative w-full overflow-x-hidden">
+      <div className="container mx-auto px-6 md:px-12 lg:px-20 xl:px-28 pt-10 lg:pt-20 flex flex-col-reverse lg:flex-row gap-10 items-start justify-between text-left">
         <div className="absolute top-0 left-0 w-full h-section-height -z-1 bg-gradient-to-b from-cyan-100/70"></div>
 
-        <div className="max-w-xl z-10 text-gray-500">
+        <div className="flex-1 max-w-2xl z-10 text-gray-500 flex flex-col justify-between">
           <h1 className="md:text-course-deatails-heading-large text-course-deatails-heading-small font-semibold text-gray-800">
             {courseData.courseTitle}
           </h1>
@@ -127,14 +128,14 @@ const CourseDetails = () => {
               {courseData.courseContent.map((chapter, index) => (
                 <div key={index} className="border border-gray-300 bg-white mb-2 rounded">
                   <div
-                    className="flex items-center justify-between px-4 py-3 cursor-pointer select-none"
+                      className="flex flex-col md:flex-row md:items-center md:justify-between px-4 py-3 cursor-pointer select-none gap-2"
                     onClick={() => toggleSection(index)}
                   >
                     <div className="flex items-center gap-2">
                       <img src={assets.down_arrow_icon} alt="arrow icon" className={`transform transition-transform ${openSections[index] ? "rotate-180" : ""}`} />
                       <p className="font-medium md:text-base text-sm">{chapter.chapterTitle}</p>
                     </div>
-                    <p className="text-sm md:text-default">{chapter.chapterContent.length} lectures - {calculateChapterTime(chapter)}</p>
+                    <p className="text-xs md:text-sm text-gray-600 whitespace-nowrap">{chapter.chapterContent.length} lectures - {calculateChapterTime(chapter)}</p>
                   </div>
 
                   <div className={`overflow-hidden transition-all duration-300 ${openSections[index] ? "max-h-96" : "max-h-0"}`} >
@@ -167,7 +168,7 @@ const CourseDetails = () => {
           </div>
         </div>
 
-        <div className="max-w-course-card z-10 shadow-custom-card rounded-t md:rounded-none overflow-hidden bg-white min-w-[300px] sm:min-w-[420px]">
+        <div className="w-full lg:max-w-course-card z-10 shadow-custom-card rounded-xl overflow-hidden bg-white">
           {
            playerData
                       ? (
@@ -204,19 +205,19 @@ const CourseDetails = () => {
               <p className="md:text-lg text-gray-500 line-through">{currency}{courseData.coursePrice}</p>
               <p className="md:text-lg text-gray-500">{courseData.discount}% off</p>
             </div>
-            <div className="flex items-center text-sm md:text-default gap-4 pt-2 md:pt-4 text-gray-500">
+            <div className="flex flex-wrap items-center text-xs sm:text-sm md:text-default gap-x-4 gap-y-2 pt-2 md:pt-4 text-gray-500">
               <div className="flex items-center gap-1">
-                <img src={assets.star} alt="star icon" />
+                <img src={assets.star} alt="star icon" className="w-3 h-3 sm:w-4 sm:h-4" />
                 <p>{calculateRating(courseData)}</p>
               </div>
-              <div className="h-4 w-px bg-gray-500/40"></div>
+              <div className="h-4 w-px bg-gray-500/40 hidden sm:block"></div>
               <div className="flex items-center gap-1">
-                <img src={assets.time_clock_icon} alt="clock icon" />
+                <img src={assets.time_clock_icon} alt="clock icon" className="w-3 h-3 sm:w-4 sm:h-4" />
                 <p>{calculateCourseDuration(courseData)}</p>
               </div>
-              <div className="h-4 w-px bg-gray-500/40"></div>
+              <div className="h-4 w-px bg-gray-500/40 hidden sm:block"></div>
               <div className="flex items-center gap-1">
-                <img src={assets.lesson_icon} alt="clock icon" />
+                <img src={assets.lesson_icon} alt="lesson icon" className="w-3 h-3 sm:w-4 sm:h-4" />
                 <p>{calculateNoOfLectures(courseData)} lessons</p>
               </div>
             </div>
@@ -236,7 +237,8 @@ const CourseDetails = () => {
           </div>
         </div>
       </div>
-      <Footer />
+      </div>
+            <Footer />
     </>
   ) : <Loading />
 };

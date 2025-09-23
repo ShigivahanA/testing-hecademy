@@ -4,6 +4,8 @@ import axios from 'axios'
 import { Line } from 'rc-progress';
 import Footer from '../../components/student/Footer';
 import PreferenceModal from '../../components/student/PreferenceModal';
+import { toast } from 'react-toastify'
+import Loading from '../../components/student/Loading';
 
 const MyEnrollments = () => {
 
@@ -11,6 +13,7 @@ const MyEnrollments = () => {
 
     const [progressArray, setProgressData] = useState([])
     const [showModal, setShowModal] = useState(false)
+    const [loading, setLoading] = useState(true)
 
     const getCourseProgress = async () => {
     if (!userData) return; // 👈 stop if logged out
@@ -38,6 +41,8 @@ const MyEnrollments = () => {
             setProgressData(tempProgressArray);
         } catch (error) {
             toast.error(error.message);
+        } finally {
+          setLoading(false);
         }
     };
 
@@ -51,6 +56,8 @@ const MyEnrollments = () => {
 
         if (userData && enrolledCourses.length > 0) {
         getCourseProgress();
+    }else if (userData) {
+          setLoading(false);
     }
   }, [enrolledCourses, userData])
 
@@ -68,6 +75,9 @@ const MyEnrollments = () => {
   )
 }
 
+    if (loading) {
+      return <Loading />  // 👈 loader while fetching data
+    }
 
     return (
         <>

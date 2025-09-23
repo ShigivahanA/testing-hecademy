@@ -11,7 +11,7 @@ import Capgemini from './Capgemini.png'
 import tcs from './tcs.jpg'
 import star from './rating_star.svg'
 import star_blank from './star_dull_icon.svg'
-import profile_img_1 from './profile_img_1.webp'
+import profile_img_1 from './profile_img_1.jpg'
 import profile_img_2 from './profile_img_2.webp'
 import profile_img_3 from './profile_img_3.webp'
 import arrow_icon from './arrow_icon.svg'
@@ -33,9 +33,6 @@ import dropdown_icon from './dropdown_icon.svg'
 import patients_icon from './patients_icon.svg'
 import play_icon from './play_icon.svg'
 import blue_tick_icon from './blue_tick_icon.svg'
-import profile_img from './profile_img.png'
-import profile_img2 from './profile_img2.png'
-import profile_img3 from './profile_img3.png'
 import lesson_icon from './lesson_icon.svg'
 import bookflip from './bookflip.gif'
 
@@ -75,9 +72,6 @@ export const assets = {
     appointments_icon,
     earning_icon,
     patients_icon,
-    profile_img,
-    profile_img2,
-    profile_img3,
     play_icon,
     blue_tick_icon,
     lesson_icon,

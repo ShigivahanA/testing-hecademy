@@ -13,7 +13,6 @@ const Home = () => {
   const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
-    // ✅ Only show preference modal for learners, not educators
     if (
       userData && 
       !isEducator && 

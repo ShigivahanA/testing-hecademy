@@ -3,12 +3,14 @@ import { AppContext } from '../../context/AppContext'
 import axios from 'axios'
 import { Line } from 'rc-progress';
 import Footer from '../../components/student/Footer';
+import PreferenceModal from '../../components/student/PreferenceModal';
 
 const MyEnrollments = () => {
 
-    const { userData, enrolledCourses, fetchUserEnrolledCourses, navigate, backendUrl, getToken, calculateCourseDuration, calculateNoOfLectures } = useContext(AppContext)
+    const { userData, enrolledCourses, fetchUserEnrolledCourses, navigate, backendUrl, getToken, calculateCourseDuration, calculateNoOfLectures, isEducator } = useContext(AppContext)
 
     const [progressArray, setProgressData] = useState([])
+    const [showModal, setShowModal] = useState(false)
 
     const getCourseProgress = async () => {
     if (!userData) return; // 👈 stop if logged out
@@ -72,7 +74,17 @@ const MyEnrollments = () => {
 
             <div className='md:px-36 px-8 pt-10'>
 
-                <h1 className='text-2xl font-semibold'>My Enrollments</h1>
+                <div className="flex justify-between items-center mb-6">
+              <h1 className='text-2xl font-semibold'>My Enrollments</h1>
+              {!isEducator && (
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                >
+                  Change Preferences
+                </button>
+              )}
+            </div>
 
                 <table className="md:table-auto table-fixed w-full overflow-hidden border mt-10">
                     <thead className="text-gray-900 border-b border-gray-500/20 text-sm text-left max-sm:hidden">
@@ -111,7 +123,7 @@ const MyEnrollments = () => {
             </div>
 
             <Footer />
-
+        {showModal && <PreferenceModal onClose={() => setShowModal(false)} />}
         </>
     )
 }

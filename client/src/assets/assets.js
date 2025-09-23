@@ -81,120 +81,53 @@ export const assets = {
     play_icon,
     blue_tick_icon,
     lesson_icon,
-    topics:[
-    // 🔹 Programming Languages
-    "JavaScript", "TypeScript", "Python", "Java", "C", "C++", "C#", "Go", "Rust", "PHP", "Ruby", "Kotlin", "Swift", "Scala", "Perl", "R", "Dart", "Objective-C", "Haskell", "Elixir",
+topics: [
+  // 🔹 Programming & Development
+  "Web Development", "Frontend Development", "Backend Development",
+  "JavaScript", "React", "Node.js", "Fullstack Development",
 
-    // 🔹 Web Development
-    "HTML", "CSS", "React", "Next.js", "Angular", "Vue.js", "Svelte", "Tailwind CSS", "Bootstrap", "jQuery", "GraphQL", "Apollo", "Redux", "Node.js", "Express.js", "Deno",
+  // 🔹 Data Science & AI
+  "Data Science", "Data Analysis", "Data Visualization",
+  "Artificial Intelligence", "Machine Learning", "Deep Learning",
+  "Applied AI", "Core Machine Learning", "AI in Industry",
 
-    // 🔹 Backend & Databases
-    "MongoDB", "PostgreSQL", "MySQL", "SQLite", "Firebase", "Supabase", "Redis", "Cassandra", "DynamoDB", "Elasticsearch", "Prisma", "Drizzle ORM",
+  // 🔹 Cybersecurity
+  "Cybersecurity", "Ethical Hacking", "Security Practices",
+  "Applied Cybersecurity", "Network Security", "Cloud Security",
 
-    // 🔹 DevOps & Cloud
-    "AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "CI/CD", "Terraform", "Ansible", "Jenkins", "GitHub Actions", "Linux", "Shell Scripting", "Networking",
+  // 🔹 Digital Marketing
+  "Digital Marketing", "SEO", "Social Media Marketing", 
+  "Content Marketing", "Marketing Strategy", "Analytics & Optimization",
 
-    // 🔹 Data & AI
-    "Machine Learning", "Deep Learning", "Artificial Intelligence", "NLP", "Computer Vision", "Data Science", "Data Analysis", "Big Data", "TensorFlow", "PyTorch", "Scikit-learn", "Pandas", "NumPy", "Matplotlib", "Seaborn", "Power BI", "Tableau",
+  // 🔹 UI/UX & Design
+  "UI/UX Design", "UI Design", "UX Design",
+  "Web Design", "Prototyping", "Design Tools (Figma, Adobe XD)",
 
-    // 🔹 Mobile Development
-    "React Native", "Flutter", "SwiftUI", "Android Development", "iOS Development",
-
-    // 🔹 Cybersecurity
-    "Ethical Hacking", "Penetration Testing", "Network Security", "Web Security", "Cloud Security", "Cryptography", "Blockchain Security",
-
-    // 🔹 Design & UX
-    "UI Design", "UX Design", "Figma", "Adobe XD", "Adobe Photoshop", "Illustrator", "Canva", "Prototyping", "Wireframing", "Design Systems",
-
-    // 🔹 Other Tech
-    "Blockchain", "Web3", "Smart Contracts", "Solidity", "Metaverse", "AR/VR", "IoT", "Robotics", "Quantum Computing",
-
-    // 🔹 Career Skills
-    "DSA", "Competitive Programming", "System Design", "OOP", "Agile", "Scrum", "Project Management", "Product Management", "SEO", "Digital Marketing", "Content Writing", "Entrepreneurship", "Business Analytics"
-  ],
+  // 🔹 Career Skills
+  "Project Management", "Business Analytics", "Entrepreneurship"
+],
     goals: [
-    "Career Growth",
-    "Exam Preparation",
-    "Freelancing",
-    "Job Readiness",
-    "Skill Upgrade",
-    "Personal Projects",
-    "Startup Building",
-    "Hobby Learning",
-    "Research Work",
-    "Competitive Programming",
-    "Open Source Contribution",
-    "Networking",
-    "Portfolio Building",
-    "Remote Job Preparation",
-    "Internship Preparation",
-    "Higher Studies Preparation",
-    "Certifications",
-    "Upskilling",
-    "Switching Careers",
-    "Improving Productivity",
-    "Leadership Skills",
-    "Teaching Others",
-    "Exploring New Tech",
-    "Mastering Fundamentals",
-    "Creative Expression",
-    "Problem Solving",
-    "Critical Thinking",
-    "Team Collaboration",
-    "Communication Skills",
-    "Confidence Building",
-    "Innovation",
-    "Industry Knowledge",
-    "Building Side Hustle",
-    "Work-Life Balance",
-    "Becoming Fullstack",
-    "Specializing in AI",
-    "Becoming Data Scientist",
-    "Becoming Software Engineer",
-    "Becoming Cloud Engineer",
-    "Becoming Cybersecurity Expert",
-    "Becoming UI/UX Designer",
-    "Becoming Mobile Developer",
-    "Becoming Game Developer",
-    "Becoming Researcher",
-    "Contributing to Open Source",
-    "Building Strong Resume",
-    "Preparing for Tech Interviews",
-    "Cracking Competitive Exams",
-    "Learning for Fun",
-    "Exploring Future Tech",
-    "Building Startup MVP",
-    "Getting Promotions",
-    "Improving Problem-Solving Skills",
-    "Strengthening Core Knowledge",
-    "Global Opportunities",
-    "Financial Independence",
-    "Mentorship Readiness",
-    "Exploring Freelance Marketplaces",
-    "Enhancing Creativity",
-    "Collaboration with Teams",
-    "Building SaaS Products",
-    "Exploring Entrepreneurship",
-    "Improving Coding Speed",
-    "Mastering Debugging",
-    "Building Industry Projects",
-    "Community Building",
-    "Networking with Professionals",
-    "Learning New Frameworks",
-    "Career Switch to Tech",
-    "Exploring Blockchain",
-    "Exploring AR/VR",
-    "Exploring IoT",
-    "Building AI Solutions",
-    "Improving Logical Thinking",
-    "Learning Cloud Deployments",
-    "Becoming Tech Entrepreneur",
-    "Research Publications",
-    "Patent Creation",
-    "Becoming Mentor",
-    "Becoming Tech Leader",
-    "Exploring Quantum Computing"
-  ]
+  "Career Growth",
+  "Job Readiness",
+  "Skill Upgrade / Upskilling",
+  "Freelancing",
+  "Internship & Exam Preparation",
+  "Portfolio Building",
+  "Startup & Entrepreneurship",
+  "Personal Projects",
+  "Competitive Programming",
+  "Open Source Contribution",
+  "Certifications",
+  "Switching Careers",
+  "Becoming Fullstack Developer",
+  "Specializing in AI / Data Science",
+  "Becoming Cybersecurity Expert",
+  "Becoming UI/UX Designer",
+  "Becoming Cloud Engineer",
+  "Preparing for Tech Interviews",
+  "Exploring Emerging Tech (Blockchain, AR/VR, IoT, Quantum)",
+  "Learning for Fun & Creativity"
+]
 }
 
 

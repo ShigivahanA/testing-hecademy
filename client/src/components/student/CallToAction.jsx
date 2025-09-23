@@ -15,8 +15,10 @@ const CallToAction = () => {
       openSignIn() // ✅ case 1: not logged in
     } else if (isEducator) {
       navigate('/educator') 
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-      navigate('/my-enrollments') 
+      navigate('/my-enrollments')
+      window.scrollTo({ top: 0, behavior: 'smooth' }) 
     }
   }
 

@@ -96,10 +96,14 @@ export const userEnrolledCourses = async (req, res) => {
         const userData = await User.findById(userId)
             .populate('enrolledCourses')
 
-        const pendingPurchases = await Purchase.find({ userId, status: 'pending' })
-            .populate('courseId');
+        const pendingCourses = purchases
+            .filter(p => p.status === "pending" && !completedCourseIds.includes(p.courseId.toString()))
+            .map(p => ({
+                courseId: p.courseId,
+                status: p.status,
+            }));  
 
-        res.json({ success: true, enrolledCourses: userData.enrolledCourses, pendingCourses: pendingPurchases.map(p => p.courseId) })
+        res.json({ success: true, enrolledCourses: userData.enrolledCourses, pendingCourses})
 
     } catch (error) {
         res.json({ success: false, message: error.message })

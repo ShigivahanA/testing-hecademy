@@ -22,6 +22,7 @@ export const AppContextProvider = (props) => {
     const [allCourses, setAllCourses] = useState([])
     const [userData, setUserData] = useState(null)
     const [enrolledCourses, setEnrolledCourses] = useState([])
+    const [pendingCourses, setPendingCourses] = useState([])
 
     // Fetch All Courses
     const fetchAllCourses = async () => {
@@ -78,6 +79,11 @@ export const AppContextProvider = (props) => {
 
         if (data.success) {
             setEnrolledCourses(data.enrolledCourses.reverse())
+            setPendingCourses(data.pendingCourses || [])
+            setUserData(prev => ({
+          ...prev,
+          pendingCourses: data.pendingCourses || []
+        }))
         } else (
             toast.error(data.message)
         )
@@ -165,7 +171,7 @@ const fetchRecommendations = async () => {
         showLogin, setShowLogin,
         backendUrl, currency, navigate,
         userData, setUserData, getToken,
-        allCourses, fetchAllCourses,
+        allCourses, fetchAllCourses,pendingCourses,
         enrolledCourses, fetchUserEnrolledCourses,
         calculateChapterTime, calculateCourseDuration,
         calculateRating, calculateNoOfLectures,

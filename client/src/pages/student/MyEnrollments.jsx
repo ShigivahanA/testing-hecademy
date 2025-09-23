@@ -96,7 +96,7 @@ const MyEnrollments = () => {
               )}
             </div>
 
-                <table className="md:table-auto table-fixed w-full overflow-hidden border mt-10">
+                <table className="md:table-auto table-fixed w-full overflow-hidden border-[0.5px] mt-10 rounded-lg border-gray-500/20 shadow-md">
                     <thead className="text-gray-900 border-b border-gray-500/20 text-sm text-left max-sm:hidden">
                         <tr>
                             <th className="px-4 py-3 font-semibold truncate">Course</th>
@@ -121,7 +121,7 @@ const MyEnrollments = () => {
                                     <span className='text-xs ml-2'>Lectures</span>
                                 </td>
                                 <td className="px-4 py-3 max-sm:text-right">
-                                    <button onClick={() => navigate('/player/' + course._id)} className='px-3 sm:px-5 py-1.5 sm:py-2 bg-blue-600 max-sm:text-xs text-white'>
+                                    <button onClick={() => navigate('/player/' + course._id)} className='px-3 sm:px-5 py-1.5 sm:py-2 bg-blue-600 max-sm:text-xs text-white rounded-lg'>
                                         {progressArray[index] && progressArray[index].lectureCompleted / progressArray[index].totalLectures === 1 ? 'Completed' : 'On Going'}
                                     </button>
                                 </td>
@@ -129,18 +129,27 @@ const MyEnrollments = () => {
                         ))}
 
                         {userData?.pendingCourses?.map((course, index) => (
-                          <tr key={`pending-${index}`} className="border-b border-gray-500/20 bg-yellow-50">
+                          <tr
+                            key={`pending-${index}`}
+                            className="border-b border-gray-500/20 bg-yellow-300/50"
+                          >
                             <td className="md:px-4 pl-2 md:pl-4 py-3 flex items-center space-x-3">
-                              <img src={course.courseThumbnail} alt="" className="w-14 sm:w-24 md:w-28" />
+                              <img
+                                src={course.courseThumbnail}
+                                alt=""
+                                className="w-14 sm:w-24 md:w-28"
+                              />
                               <div className="flex-1">
-                                <p className="mb-1 max-sm:text-sm">{course.courseTitle}</p>
-                                <p className="text-yellow-600 text-sm">⏳ Enrollment Pending - Complete payment soon!</p>
+                                <p className="mb-1 text-sm sm:text-base">{course.courseTitle}</p>
+                                <p className="text-red-600 text-xs sm:text-sm leading-snug">
+                                  Payment Pending
+                                </p>
                               </div>
                             </td>
                             <td className="px-4 py-3 max-sm:hidden">--</td>
                             <td className="px-4 py-3 max-sm:hidden">--</td>
                             <td className="px-4 py-3 max-sm:text-right">
-                              <button className="px-3 sm:px-5 py-1.5 sm:py-2 bg-yellow-500 text-white">
+                              <button onClick={() => navigate(`/course/${course._id}`)} className="px-3 sm:px-5 py-1.5 sm:py-2 bg-red-500 text-white text-xs sm:text-sm rounded-lg">
                                 Pending
                               </button>
                             </td>

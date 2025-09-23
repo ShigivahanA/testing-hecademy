@@ -87,29 +87,46 @@ export const purchaseCourse = async (req, res) => {
 }
 
 // Users Enrolled Courses With Lecture Links
+// Users Enrolled Courses With Lecture Links
 export const userEnrolledCourses = async (req, res) => {
+  try {
+    const userId = req.auth.userId;
 
-    try {
+    // Get user + enrolled courses
+    const userData = await User.findById(userId).populate("enrolledCourses");
 
-        const userId = req.auth.userId
+    // Get all purchases by this user
+    const purchases = await Purchase.find({ userId }).populate("courseId");
 
-        const userData = await User.findById(userId)
-            .populate('enrolledCourses')
+    // Separate completed + pending
+    const completedCourseIds = purchases
+      .filter((p) => p.status === "completed")
+      .map((p) => p.courseId._id.toString());
 
-        const pendingCourses = Purchase
-            .filter(p => p.status === "pending" && !completedCourseIds.includes(p.courseId.toString()))
-            .map(p => ({
-                courseId: p.courseId,
-                status: p.status,
-            }));  
+    // Pending only if not completed
+    const pendingCourses = purchases
+      .filter(
+        (p) =>
+          p.status === "pending" &&
+          !completedCourseIds.includes(p.courseId._id.toString())
+      )
+      .map((p) => ({
+        _id: p.courseId._id,
+        courseTitle: p.courseId.courseTitle,
+        courseThumbnail: p.courseId.courseThumbnail,
+        status: p.status,
+      }));
 
-        res.json({ success: true, enrolledCourses: userData.enrolledCourses, pendingCourses})
+    res.json({
+      success: true,
+      enrolledCourses: userData.enrolledCourses,
+      pendingCourses,
+    });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
 
-    } catch (error) {
-        res.json({ success: false, message: error.message })
-    }
-
-}
 
 // Update User Course Progress
 export const updateUserCourseProgress = async (req, res) => {

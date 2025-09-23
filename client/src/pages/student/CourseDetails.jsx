@@ -23,7 +23,6 @@ const CourseDetails = () => {
   const { backendUrl, currency, userData, calculateChapterTime, calculateCourseDuration, calculateRating, calculateNoOfLectures, isEducator, } = useContext(AppContext)
   const { getToken } = useAuth()
 
-
   const fetchCourseData = async () => {
 
     try {
@@ -151,9 +150,13 @@ const CourseDetails = () => {
                           <div className="flex items-center justify-between w-full text-gray-800 text-xs md:text-default">
                             <p>{lecture.lectureTitle}</p>
                             <div className='flex gap-2'>
-                              {lecture.isPreviewFree && <p onClick={() => setPlayerData({
-                                videoId: lecture.lectureUrl.split('/').pop()
-                              })} className='text-blue-500 cursor-pointer'>Preview</p>}
+                              {lecture.isPreviewFree && <p onClick={() => {
+                                      setPlayerData({ videoId: lecture.lectureUrl.split('/').pop() });
+                                      setTimeout(() => {
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                      }, 100);
+                                    }}
+                                    className="text-blue-500 cursor-pointer">Preview</p>}
                               <p>{humanizeDuration(lecture.lectureDuration * 60 * 1000, { units: ['h', 'm'] })}</p>
                             </div>
                           </div>
@@ -179,7 +182,7 @@ const CourseDetails = () => {
                       ? (
                         <YouTube
                             videoId={playerData.videoId}
-                            opts={{ playerVars: { autoplay: 1 } }}
+                            opts={{ playerVars: { autoplay: 1, mute:1 } }}
                             iframeClassName="w-full aspect-video"
                             onReady={(event) => {
                               const player = event.target;

@@ -127,6 +127,25 @@ const MyEnrollments = () => {
                                 </td>
                             </tr>
                         ))}
+
+                        {userData?.pendingCourses?.map((course, index) => (
+                          <tr key={`pending-${index}`} className="border-b border-gray-500/20 bg-yellow-50">
+                            <td className="md:px-4 pl-2 md:pl-4 py-3 flex items-center space-x-3">
+                              <img src={course.courseThumbnail} alt="" className="w-14 sm:w-24 md:w-28" />
+                              <div className="flex-1">
+                                <p className="mb-1 max-sm:text-sm">{course.courseTitle}</p>
+                                <p className="text-yellow-600 text-sm">⏳ Enrollment Pending - Complete payment soon!</p>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 max-sm:hidden">--</td>
+                            <td className="px-4 py-3 max-sm:hidden">--</td>
+                            <td className="px-4 py-3 max-sm:text-right">
+                              <button className="px-3 sm:px-5 py-1.5 sm:py-2 bg-yellow-500 text-white">
+                                Pending
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                 </table>
 

@@ -9,6 +9,7 @@ import { toast } from 'react-toastify';
 import Rating from '../../components/student/Rating';
 import Footer from '../../components/student/Footer';
 import Loading from '../../components/student/Loading';
+import jsPDF from "jspdf"
 
 const Player = ({ }) => {
 
@@ -98,6 +99,75 @@ const Player = ({ }) => {
     }
 
   }
+
+
+const generateCertificate = () => {
+  const userName = userData?.name || "Learner";
+  const courseName = courseData?.courseTitle || "Unnamed Course";
+  const issueDate = new Date().toLocaleDateString();
+
+  const doc = new jsPDF("landscape");
+
+  // 🎨 Background
+  doc.setFillColor(240, 248, 255);
+  doc.rect(0, 0, 297, 210, "F");
+
+  // 🏫 Logo (relaxed size & spacing)
+  const logo = assets.logo;
+  if (logo) {
+    doc.addImage(logo, "PNG", 20, 20, 35, 18); // smaller & lower
+  }
+
+  // 🏆 Title
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(28);
+  doc.text("Certificate of Completion", 148, 60, { align: "center" });
+
+  // 👤 Name
+  doc.setFont("times", "italic");
+  doc.setFontSize(22);
+  doc.text(userName, 148, 90, { align: "center" });
+
+  // 📘 Subtitle
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(16);
+  doc.text("has successfully completed the course", 148, 105, { align: "center" });
+
+  // 📚 Course Name
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text(`"${courseName}"`, 148, 120, { align: "center" });
+
+  // 📅 Date
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(14);
+  doc.text(`Date: ${issueDate}`, 148, 140, { align: "center" });
+
+  // ✍️ Signature Line + Hecker (above line)
+  doc.setFont("times", "italic");
+  doc.setFontSize(16);
+  doc.text("Hecker", 230, 155); // Hecker above line
+  doc.text("_____________________", 220, 165);
+
+  // 📌 Footer
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "italic");
+  doc.text("Hecademy • Your Brain's Upgrade", 148, 190, { align: "center" });
+
+  // 💾 Save PDF
+  doc.save(`${userName}_${courseName}_certificate.pdf`);
+  toast.success("🎉 Certificate downloaded!");
+};
+
+
+
+  const isCourseCompleted =
+    progressData &&
+    progressData.lectureCompleted.length ===
+      courseData.courseContent.reduce(
+        (total, chapter) => total + chapter.chapterContent.length,
+        0
+      );
 
   const handleRate = async (rating) => {
 
@@ -195,6 +265,23 @@ if (!courseData) {
           <h1 className="text-xl font-bold">Rate this Course:</h1>
           <Rating initialRating={initialRating} onRate={handleRate} />
         </div>
+        {isCourseCompleted && (
+            <div className="mt-6 text-center bg-green-50 border border-green-200 rounded-lg p-6 shadow-sm">
+              <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">
+                You have successfully completed the course
+              </h1>
+              <h1 className="text-base sm:text-lg text-gray-600 mb-6">
+                Claim your certificate by clicking the button below!
+              </h1>
+              <button
+                onClick={generateCertificate}
+                className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white font-medium text-lg rounded-lg hover:bg-green-700 transition"
+              >
+                Generate Certificate
+              </button>
+            </div>
+        )}
+
 
       </div>
 

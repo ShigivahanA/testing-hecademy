@@ -9,7 +9,11 @@ export const issueCertificate = async (req, res) => {
   try {
     const userId = req.auth.userId; 
     const { courseId } = req.body;
-    const file = req.file; // 👈 assuming multer is set up
+    const file = req.file; 
+
+    if (!file) {
+      return res.json({ success: false, message: "Certificate file missing" });
+    }
 
     // Ensure user & course exist
     const user = await User.findById(userId);
@@ -24,23 +28,19 @@ export const issueCertificate = async (req, res) => {
       return res.json({ success: true, certificate: existing });
     }
 
-    if (!file) {
-      return res.json({ success: false, message: "Certificate file missing" });
-    }
-
-    // Upload certificate PDF/image to Cloudinary
+    // Upload to Cloudinary
     const uploadRes = await cloudinary.uploader.upload(file.path, {
       folder: "certificates",
-      resource_type: "auto", // handles PDF or image
+      resource_type: "image", // only PNG/JPG
     });
 
-    // Create new certificate record
+    // Save in DB
     const certificateId = Math.random().toString(36).substr(2, 9).toUpperCase();
     const newCertificate = await Certificate.create({
       userId,
       courseId,
       certificateId,
-      certificateUrl: uploadRes.secure_url, // ✅ save URL
+      certificateUrl: uploadRes.secure_url,
     });
 
     res.json({ success: true, certificate: newCertificate });

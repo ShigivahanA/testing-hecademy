@@ -9,7 +9,7 @@ export const issueCertificate = async (req, res) => {
     const { courseId } = req.body;
 
     // Ensure user & course exist
-    const user = await User.findById(userId);
+    const user = await User.findOne({ _id: userId });  // FIXED
     const course = await Course.findById(courseId);
     if (!user || !course) {
       return res.json({ success: false, message: "User or course not found" });
@@ -31,7 +31,8 @@ export const issueCertificate = async (req, res) => {
 
     res.json({ success: true, certificate: newCertificate });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    console.error("Certificate issue error:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -49,7 +50,8 @@ export const verifyCertificate = async (req, res) => {
 
     res.json({ success: true, certificate });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    console.error("Verify error:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -62,6 +64,7 @@ export const getUserCertificates = async (req, res) => {
 
     res.json({ success: true, certificates });
   } catch (error) {
-    res.json({ success: false, message: error.message });
+    console.error("Get certs error:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

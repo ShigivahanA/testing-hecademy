@@ -130,8 +130,7 @@ const generateCertificate = (cert) => {
   // Verification Link
   doc.setFont("helvetica", "normal");
   doc.setFontSize(12);
-  doc.setTextColor(0, 0, 255);
-  doc.text(verifyLink, 650, 540, { align: "left", maxWidth: 150 });
+  doc.text(`Verify here: ${verifyLink}`, 475, 425, { align: "center" });
   // Save file
   doc.save(`${userName}_${courseName}_certificate.pdf`);
   toast.success("Certificate downloaded!");

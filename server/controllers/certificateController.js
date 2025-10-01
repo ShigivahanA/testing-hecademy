@@ -1,4 +1,4 @@
-import { Certificate } from "../models/Certificate.js";
+import { Certificate } from "../models/Certificates.js";
 import User from "../models/User.js";
 import Course from "../models/Course.js";
 

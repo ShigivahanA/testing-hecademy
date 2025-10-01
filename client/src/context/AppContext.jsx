@@ -183,41 +183,6 @@ const fetchCertificates = async () => {
   }
 };
 
-// Issue Certificate (expects courseId + pdfBlob)
-const issueCertificate = async (courseId, pdfBlob) => {
-  try {
-    const token = await getToken();
-
-    // 👉 Prepare FormData
-    const formData = new FormData();
-    formData.append("courseId", courseId);
-    formData.append(
-      "certificateFile",
-      new File([pdfBlob], "certificate.pdf", { type: "application/pdf" })
-    );
-
-    const { data } = await axios.post(
-      backendUrl + "/api/certificates/issue",
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    if (data.success) {
-      toast.success("🎉 Certificate issued!");
-      fetchCertificates(); // refresh list
-      return data.certificate;
-    } else {
-      toast.error(data.message);
-    }
-  } catch (error) {
-    toast.error(error.message);
-  }
-};
 
 
     const value = {
@@ -228,7 +193,7 @@ const issueCertificate = async (courseId, pdfBlob) => {
         enrolledCourses, fetchUserEnrolledCourses,
         calculateChapterTime, calculateCourseDuration,
         calculateRating, calculateNoOfLectures,
-        isEducator,setIsEducator, recommendations, fetchRecommendations ,certificates, fetchCertificates, issueCertificate
+        isEducator,setIsEducator, recommendations, fetchRecommendations ,certificates, fetchCertificates
     }
 
 

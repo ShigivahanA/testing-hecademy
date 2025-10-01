@@ -13,7 +13,7 @@ import jsPDF from "jspdf"
 
 const Player = ({ }) => {
 
-  const { enrolledCourses, backendUrl, getToken, calculateChapterTime, userData, fetchUserEnrolledCourses, issueCertificate } = useContext(AppContext)
+  const { enrolledCourses, backendUrl, getToken, calculateChapterTime, userData, fetchUserEnrolledCourses } = useContext(AppContext)
 
   const { courseId } = useParams()
   const [courseData, setCourseData] = useState(null)
@@ -104,9 +104,10 @@ const Player = ({ }) => {
 const generateCertificate = async () => {
   const userName = userData?.name || "Student";
   const courseName = courseData?.courseTitle || "Unnamed Course";
+  const issueDate = new Date().toLocaleDateString();
 
   try {
-    // Step 1: Create certificate PDF
+    // Step 1: Create initial doc (without verify link)
     const doc = new jsPDF("landscape", "pt", "a4");
     doc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
 
@@ -118,25 +119,15 @@ const generateCertificate = async () => {
     doc.setFontSize(22);
     doc.text(courseName, 475, 355, { align: "center" });
 
-    const issueDate = new Date().toLocaleDateString();
     doc.setFont("helvetica", "italic");
     doc.setFontSize(14);
     doc.text(issueDate, 270, 47, { align: "center" });
 
-    // Step 2: Create verify link (temp placeholder for now)
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.text("Verify Certificate (link pending)", 475, 425, { align: "center" });
-
-    // Step 3: Save PDF locally for user
-    doc.save(`${userName}_${courseName}_certificate.pdf`);
-
-    // Step 4: Render same certificate as PNG
-    const imgData = doc.output("datauristring"); // base64
+    // Step 2: Upload PNG version (for backend record)
+    const imgData = doc.output("datauristring");
     const pngBlob = await (await fetch(imgData)).blob();
     const pngFile = new File([pngBlob], "certificate.png", { type: "image/png" });
 
-    // Step 5: Upload PNG to backend
     const token = await getToken();
     const formData = new FormData();
     formData.append("courseId", courseData._id);
@@ -153,43 +144,46 @@ const generateCertificate = async () => {
       }
     );
 
-    if (data.success) {
-      const cert = data.certificate;
-
-      // Step 6: Update verify link with real certId
-      const verifyLink = `${window.location.origin}/verify/${cert.certificateId}`;
-      const finalDoc = new jsPDF("landscape", "pt", "a4");
-      finalDoc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
-
-      finalDoc.setFont("helvetica", "bold");
-      finalDoc.setFontSize(28);
-      finalDoc.text(userName, 478, 265, { align: "center" });
-
-      finalDoc.setFont("helvetica", "bold");
-      finalDoc.setFontSize(22);
-      finalDoc.text(courseName, 475, 355, { align: "center" });
-
-      finalDoc.setFont("helvetica", "italic");
-      finalDoc.setFontSize(14);
-      finalDoc.text(issueDate, 270, 47, { align: "center" });
-
-      finalDoc.setFont("helvetica", "normal");
-      finalDoc.setFontSize(12);
-      finalDoc.textWithLink("Verify Certificate", 475, 425, { url: verifyLink });
-      finalDoc.text(`Or visit: ${verifyLink}`, 475, 445, { align: "center" });
-
-      // Let user download **final version with verify link**
-      finalDoc.save(`${userName}_${courseName}_certificate.pdf`);
-
-      toast.success("🎉 Certificate issued & uploaded!");
-      fetchCertificates();
-    } else {
+    if (!data.success) {
       toast.error(data.message);
+      return;
     }
+
+    const cert = data.certificate;
+
+    // Step 3: Add verify link now that we have certificateId
+    const verifyLink = `${window.location.origin}/verify/${cert.certificateId}`;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.text(`Verify Certificate here: ${verifyLink}`, 475, 425,{ align: "center" });
+
+
+    // Step 4: Save locally with verify link
+    doc.save(`${userName}_${courseName}_certificate.pdf`);
+
+    // Step 5: Upload final PNG (so verify page has correct version)
+    const finalImgData = doc.output("datauristring");
+    const finalPngBlob = await (await fetch(finalImgData)).blob();
+    const finalPngFile = new File([finalPngBlob], "certificate.png", { type: "image/png" });
+
+    const finalFormData = new FormData();
+    finalFormData.append("courseId", courseData._id);
+    finalFormData.append("certificateFile", finalPngFile);
+
+    await axios.post(backendUrl + "/api/certificates/issue", finalFormData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    toast.success("🎉 Certificate issued with verify link!");
+    fetchCertificates();
   } catch (err) {
     toast.error("Certificate error: " + err.message);
   }
 };
+
 
 
   const isCourseCompleted =
@@ -306,8 +300,7 @@ if (!courseData) {
               </h1>
               <button
                 onClick={async () => {
-    const cert = await issueCertificate(courseData._id);
-    if (cert) generateCertificate(cert);
+await generateCertificate();
   }}
                 className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white font-medium text-lg rounded-lg hover:bg-green-700 transition"
               >

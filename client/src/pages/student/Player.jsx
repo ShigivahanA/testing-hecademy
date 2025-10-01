@@ -101,71 +101,82 @@ const Player = ({ }) => {
   }
 
 
-const generateCertificate = async (cert) => {
+const generateCertificate = async () => {
   const userName = userData?.name || "Student";
   const courseName = courseData?.courseTitle || "Unnamed Course";
-  const issueDate = new Date(cert.issueDate).toLocaleDateString();
-  const verifyLink = `${window.location.origin}/verify/${cert.certificateId}`;
-
-  const doc = new jsPDF("landscape", "pt", "a4");
-
-  // Template background
-  doc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
-
-  // Name
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(28);
-  doc.text(userName, 478, 265, { align: "center" });
-
-  // Course
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
-  doc.text(courseName, 475, 355, { align: "center" });
-
-  // Date
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(14);
-  doc.text(issueDate, 270, 47, { align: "center" });
-
-  // Verification link
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(12);
-  doc.text(`Verify here: ${verifyLink}`, 475, 425, { align: "center" });
-
-  // Save locally first
-  doc.save(`${userName}_${courseName}_certificate.pdf`);
-
-  // Then upload to Cloudinary
-  const pdfBlob = doc.output("blob");
-  const formData = new FormData();
-  formData.append("file", pdfBlob, `${userName}_${courseName}.pdf`);
-  formData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_PRESET);
 
   try {
+    // Ask backend to issue certificate first (get id + date)
+    const token = await getToken();
+    const { data } = await axios.post(
+      backendUrl + "/api/certificates/issue",
+      { courseId: courseData._id },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (!data.success) {
+      toast.error(data.message);
+      return;
+    }
+
+    const cert = data.certificate;
+    const issueDate = new Date(cert.issueDate).toLocaleDateString();
+    const verifyLink = `${window.location.origin}/verify/${cert.certificateId}`;
+
+    // 👉 Generate PDF with verify link
+    const doc = new jsPDF("landscape", "pt", "a4");
+    doc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
+
+    // Student Name
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(28);
+    doc.text(userName, 478, 265, { align: "center" });
+
+    // Course Name
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text(courseName, 475, 355, { align: "center" });
+
+    // Date
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(14);
+    doc.text(issueDate, 270, 47, { align: "center" });
+
+    // Verify link
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.textWithLink("Verify Certificate", 475, 425, { url: verifyLink });
+
+    // 👉 Convert to Blob for Cloudinary
+    const pdfBlob = new Blob([doc.output("arraybuffer")], { type: "application/pdf" });
+    const formData = new FormData();
+    formData.append("file", pdfBlob, `${userName}_${courseName}.pdf`);
+    formData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_PRESET);
+    formData.append("folder", "certificates");
+
+    // Upload to Cloudinary
     const cloudRes = await fetch(
       `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_NAME}/upload`,
       { method: "POST", body: formData }
     );
-
     const cloudData = await cloudRes.json();
     const certificateUrl = cloudData.secure_url;
 
-    // Save in backend DB
-    const token = await getToken();
+    // Update backend with Cloudinary URL
     await axios.post(
       backendUrl + "/api/certificates/issue",
       { courseId: courseData._id, certificateUrl },
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    toast.success("Certificate uploaded & saved!");
+    // Save PDF locally
+    doc.save(`${userName}_${courseName}_certificate.pdf`);
+
+    toast.success("🎉 Certificate issued & saved!");
   } catch (err) {
-    toast.error("Upload failed: " + err.message);
+    toast.error("Certificate error: " + err.message);
   }
 };
-
-
-
 
 
   const isCourseCompleted =

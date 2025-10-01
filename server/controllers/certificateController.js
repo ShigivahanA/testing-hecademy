@@ -1,15 +1,18 @@
 import { Certificate } from "../models/Certificates.js";
 import User from "../models/User.js";
 import Course from "../models/Course.js";
+import { v2 as cloudinary } from 'cloudinary'
+
 
 // Issue a certificate
 export const issueCertificate = async (req, res) => {
   try {
-    const userId = req.auth.userId; // Clerk auth
-    const { courseId, certificateUrl } = req.body;
+    const userId = req.auth.userId; 
+    const { courseId } = req.body;
+    const file = req.file; // 👈 assuming multer is set up
 
     // Ensure user & course exist
-    const user = await User.findOne({ _id: userId });  // FIXED
+    const user = await User.findById(userId);
     const course = await Course.findById(courseId);
     if (!user || !course) {
       return res.json({ success: false, message: "User or course not found" });
@@ -21,13 +24,23 @@ export const issueCertificate = async (req, res) => {
       return res.json({ success: true, certificate: existing });
     }
 
-    // Create new certificate
+    if (!file) {
+      return res.json({ success: false, message: "Certificate file missing" });
+    }
+
+    // Upload certificate PDF/image to Cloudinary
+    const uploadRes = await cloudinary.uploader.upload(file.path, {
+      folder: "certificates",
+      resource_type: "auto", // handles PDF or image
+    });
+
+    // Create new certificate record
     const certificateId = Math.random().toString(36).substr(2, 9).toUpperCase();
     const newCertificate = await Certificate.create({
       userId,
       courseId,
       certificateId,
-      certificateUrl,
+      certificateUrl: uploadRes.secure_url, // ✅ save URL
     });
 
     res.json({ success: true, certificate: newCertificate });

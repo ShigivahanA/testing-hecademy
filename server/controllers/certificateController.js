@@ -15,14 +15,14 @@ export const issueCertificate = async (req, res) => {
       return res.json({ success: false, message: "Certificate file missing" });
     }
 
-    // Ensure user & course exist
+    // Validate user & course
     const user = await User.findById(userId);
     const course = await Course.findById(courseId);
     if (!user || !course) {
       return res.json({ success: false, message: "User or course not found" });
     }
 
-    // Check if already issued
+    // Already issued?
     let existing = await Certificate.findOne({ userId, courseId });
     if (existing) {
       return res.json({ success: true, certificate: existing });

@@ -106,42 +106,38 @@ const generateCertificate = async () => {
   const courseName = courseData?.courseTitle || "Unnamed Course";
 
   try {
-    const token = await getToken();
-
-    // 👉 Generate PDF with jsPDF
+    // Generate PDF
     const doc = new jsPDF("landscape", "pt", "a4");
     doc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
 
-    // Student Name
     doc.setFont("helvetica", "bold");
     doc.setFontSize(28);
     doc.text(userName, 478, 265, { align: "center" });
 
-    // Course Name
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
     doc.text(courseName, 475, 355, { align: "center" });
 
-    // Issue Date
     const issueDate = new Date().toLocaleDateString();
     doc.setFont("helvetica", "italic");
     doc.setFontSize(14);
     doc.text(issueDate, 270, 47, { align: "center" });
 
-    // Verify placeholder (real verify link comes later)
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
-    doc.text("Verify Certificate (link will be online)", 475, 425, { align: "center" });
+    // 👉 Save locally
+    doc.save(`${userName}_${courseName}_certificate.pdf`);
 
-    // 👉 Convert to Blob for upload
-    const pdfBlob = new Blob([doc.output("arraybuffer")], { type: "application/pdf" });
+    // 👉 Convert PDF to Blob
+    const pdfBlob = new Blob([doc.output("arraybuffer")], {
+      type: "application/pdf",
+    });
 
-    // Prepare form data
+    // 👉 Create FormData just like addCourse
     const formData = new FormData();
     formData.append("courseId", courseData._id);
     formData.append("certificateFile", pdfBlob, `${userName}_${courseName}.pdf`);
 
-    // Send to backend (backend uploads to Cloudinary)
+    // Send to backend
+    const token = await getToken();
     const { data } = await axios.post(
       backendUrl + "/api/certificates/issue",
       formData,
@@ -154,8 +150,7 @@ const generateCertificate = async () => {
     );
 
     if (data.success) {
-      doc.save(`${userName}_${courseName}_certificate.pdf`); // local download
-      toast.success("🎉 Certificate issued & uploaded!");
+      toast.success("🎉 Certificate issued!");
     } else {
       toast.error(data.message);
     }
@@ -163,6 +158,7 @@ const generateCertificate = async () => {
     toast.error("Certificate error: " + err.message);
   }
 };
+
 
 
 

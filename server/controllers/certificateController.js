@@ -7,9 +7,9 @@ import { v2 as cloudinary } from 'cloudinary'
 // Issue a certificate
 export const issueCertificate = async (req, res) => {
   try {
-    const userId = req.auth.userId; 
+    const userId = req.auth.userId;
     const { courseId } = req.body;
-    const file = req.file; 
+    const file = req.file; // multer parses this
 
     if (!file) {
       return res.json({ success: false, message: "Certificate file missing" });
@@ -31,7 +31,7 @@ export const issueCertificate = async (req, res) => {
     // Upload to Cloudinary
     const uploadRes = await cloudinary.uploader.upload(file.path, {
       folder: "certificates",
-      resource_type: "image", // only PNG/JPG
+      resource_type: "auto", // auto-detect pdf/image
     });
 
     // Save in DB

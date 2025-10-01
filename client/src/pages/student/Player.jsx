@@ -106,24 +106,9 @@ const generateCertificate = async () => {
   const courseName = courseData?.courseTitle || "Unnamed Course";
 
   try {
-    // Ask backend to issue certificate first (get id + date)
     const token = await getToken();
-    const { data } = await axios.post(
-      backendUrl + "/api/certificates/issue",
-      { courseId: courseData._id },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
 
-    if (!data.success) {
-      toast.error(data.message);
-      return;
-    }
-
-    const cert = data.certificate;
-    const issueDate = new Date(cert.issueDate).toLocaleDateString();
-    const verifyLink = `${window.location.origin}/verify/${cert.certificateId}`;
-
-    // 👉 Generate PDF with verify link
+    // 👉 Generate PDF with jsPDF
     const doc = new jsPDF("landscape", "pt", "a4");
     doc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
 
@@ -137,46 +122,48 @@ const generateCertificate = async () => {
     doc.setFontSize(22);
     doc.text(courseName, 475, 355, { align: "center" });
 
-    // Date
+    // Issue Date
+    const issueDate = new Date().toLocaleDateString();
     doc.setFont("helvetica", "italic");
     doc.setFontSize(14);
     doc.text(issueDate, 270, 47, { align: "center" });
 
-    // Verify link
+    // Verify placeholder (real verify link comes later)
     doc.setFont("helvetica", "normal");
     doc.setFontSize(12);
-    doc.textWithLink("Verify Certificate", 475, 425, { url: verifyLink });
+    doc.text("Verify Certificate (link will be online)", 475, 425, { align: "center" });
 
-    // 👉 Convert to Blob for Cloudinary
+    // 👉 Convert to Blob for upload
     const pdfBlob = new Blob([doc.output("arraybuffer")], { type: "application/pdf" });
+
+    // Prepare form data
     const formData = new FormData();
-    formData.append("file", pdfBlob, `${userName}_${courseName}.pdf`);
-    formData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_PRESET);
-    formData.append("folder", "certificates");
+    formData.append("courseId", courseData._id);
+    formData.append("certificateFile", pdfBlob, `${userName}_${courseName}.pdf`);
 
-    // Upload to Cloudinary
-    const cloudRes = await fetch(
-      `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_NAME}/upload`,
-      { method: "POST", body: formData }
-    );
-    const cloudData = await cloudRes.json();
-    const certificateUrl = cloudData.secure_url;
-
-    // Update backend with Cloudinary URL
-    await axios.post(
+    // Send to backend (backend uploads to Cloudinary)
+    const { data } = await axios.post(
       backendUrl + "/api/certificates/issue",
-      { courseId: courseData._id, certificateUrl },
-      { headers: { Authorization: `Bearer ${token}` } }
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
     );
 
-    // Save PDF locally
-    doc.save(`${userName}_${courseName}_certificate.pdf`);
-
-    toast.success("🎉 Certificate issued & saved!");
+    if (data.success) {
+      doc.save(`${userName}_${courseName}_certificate.pdf`); // local download
+      toast.success("🎉 Certificate issued & uploaded!");
+    } else {
+      toast.error(data.message);
+    }
   } catch (err) {
     toast.error("Certificate error: " + err.message);
   }
 };
+
 
 
   const isCourseCompleted =

@@ -9,7 +9,7 @@ import { clerkWebhooks, stripeWebhooks } from './controllers/webhooks.js'
 import educatorRouter from './routes/educatorRoutes.js'
 import courseRouter from './routes/courseRoute.js'
 import recommendationRouter from './routes/recommendationRoutes.js'
-import certificateRoutes from "./routes/certificateRoutes.js";
+import certificaterouter from "./routes/certificateRoutes.js";
 
 // Initialize Express
 const app = express()
@@ -30,7 +30,7 @@ app.use('/api/educator', express.json(), educatorRouter)
 app.use('/api/course', express.json(), courseRouter)
 app.use('/api/user', express.json(), userRouter)
 app.use('/api/recommendations', express.json(), recommendationRouter)
-app.use("/api/certificates",express.json(), certificateRoutes);
+app.use("/api/certificates",express.json(), certificaterouter);
 
 // Port
 const PORT = process.env.PORT || 5000

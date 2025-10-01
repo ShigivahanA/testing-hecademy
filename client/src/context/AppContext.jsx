@@ -150,6 +150,7 @@ export const AppContextProvider = (props) => {
         if (user) {
             fetchUserData()
             fetchUserEnrolledCourses()
+            fetchCertificates();
         }
     }, [user])
 

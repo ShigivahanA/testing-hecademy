@@ -9,34 +9,33 @@ export const issueCertificate = async (req, res) => {
   try {
     const userId = req.auth.userId;
     const { courseId } = req.body;
-    const file = req.file; // multer parses this
+    const file = req.file;
 
     if (!file) {
       return res.json({ success: false, message: "Certificate file missing" });
     }
 
-    // Validate user & course
+    // Validate
     const user = await User.findById(userId);
     const course = await Course.findById(courseId);
     if (!user || !course) {
       return res.json({ success: false, message: "User or course not found" });
     }
 
-    // Already issued?
+    // Already exists?
     let existing = await Certificate.findOne({ userId, courseId });
     if (existing) {
       return res.json({ success: true, certificate: existing });
     }
 
-    // Upload to Cloudinary
-const uploadRes = await cloudinary.uploader.upload(file.path, {
-  folder: "certificates",
-  resource_type: "image",   // ✅ force image (png/jpg only)
-  format: "png",            // ✅ convert to png
-});
+    // Upload PNG to Cloudinary
+    const uploadRes = await cloudinary.uploader.upload(file.path, {
+      folder: "certificates",
+      resource_type: "image",
+      format: "png", // ✅ force png
+    });
 
-
-    // Save in DB
+    // Save record
     const certificateId = Math.random().toString(36).substr(2, 9).toUpperCase();
     const newCertificate = await Certificate.create({
       userId,
@@ -51,6 +50,7 @@ const uploadRes = await cloudinary.uploader.upload(file.path, {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 // Verify a certificate
 export const verifyCertificate = async (req, res) => {

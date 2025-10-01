@@ -106,86 +106,90 @@ const generateCertificate = async () => {
   const courseName = courseData?.courseTitle || "Unnamed Course";
 
   try {
-    // 👉 Generate PDF with jsPDF
+    // Step 1: Create certificate PDF
     const doc = new jsPDF("landscape", "pt", "a4");
     doc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
 
-    // Student Name
     doc.setFont("helvetica", "bold");
     doc.setFontSize(28);
     doc.text(userName, 478, 265, { align: "center" });
 
-    // Course Name
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
     doc.text(courseName, 475, 355, { align: "center" });
 
-    // Issue Date
     const issueDate = new Date().toLocaleDateString();
     doc.setFont("helvetica", "italic");
     doc.setFontSize(14);
     doc.text(issueDate, 270, 47, { align: "center" });
 
-    // 👉 Convert PDF → Blob
-    const pdfBlob = new Blob([doc.output("arraybuffer")], {
-      type: "application/pdf",
-    });
-
-    // Step 1: Ask backend to issue & get certId
-    const cert = await issueCertificate(courseData._id, pdfBlob);
-    if (!cert) return;
-
-    // Step 2: Add verify link using real certificateId
-    const verifyLink = `${window.location.origin}/verify/${cert.certificateId}`;
+    // Step 2: Create verify link (temp placeholder for now)
     doc.setFont("helvetica", "normal");
     doc.setFontSize(12);
-    doc.textWithLink("Verify Certificate", 475, 425, { url: verifyLink });
-    doc.text(`Or visit: ${verifyLink}`, 475, 445, { align: "center" });
+    doc.text("Verify Certificate (link pending)", 475, 425, { align: "center" });
 
-    // 👉 Save locally as PDF
+    // Step 3: Save PDF locally for user
     doc.save(`${userName}_${courseName}_certificate.pdf`);
 
-    // 👉 Also upload PNG version for display
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+    // Step 4: Render same certificate as PNG
+    const imgData = doc.output("datauristring"); // base64
+    const pngBlob = await (await fetch(imgData)).blob();
+    const pngFile = new File([pngBlob], "certificate.png", { type: "image/png" });
 
-    // Convert first PDF page to image
-    const imgData = doc.output("datauristring");
-    const img = new Image();
-    img.src = imgData;
-    await new Promise((resolve) => (img.onload = resolve));
-
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
-
-    const pngBlob = await new Promise((resolve) =>
-      canvas.toBlob(resolve, "image/png")
-    );
-
-    const pngFile = new File([pngBlob], "certificate.png", {
-      type: "image/png",
-    });
-
+    // Step 5: Upload PNG to backend
     const token = await getToken();
     const formData = new FormData();
     formData.append("courseId", courseData._id);
     formData.append("certificateFile", pngFile);
 
-    await axios.post(backendUrl + "/api/certificates/issue", formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const { data } = await axios.post(
+      backendUrl + "/api/certificates/issue",
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
 
-    toast.success("🎉 Certificate issued, saved (PDF) & uploaded (PNG)!");
+    if (data.success) {
+      const cert = data.certificate;
+
+      // Step 6: Update verify link with real certId
+      const verifyLink = `${window.location.origin}/verify/${cert.certificateId}`;
+      const finalDoc = new jsPDF("landscape", "pt", "a4");
+      finalDoc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
+
+      finalDoc.setFont("helvetica", "bold");
+      finalDoc.setFontSize(28);
+      finalDoc.text(userName, 478, 265, { align: "center" });
+
+      finalDoc.setFont("helvetica", "bold");
+      finalDoc.setFontSize(22);
+      finalDoc.text(courseName, 475, 355, { align: "center" });
+
+      finalDoc.setFont("helvetica", "italic");
+      finalDoc.setFontSize(14);
+      finalDoc.text(issueDate, 270, 47, { align: "center" });
+
+      finalDoc.setFont("helvetica", "normal");
+      finalDoc.setFontSize(12);
+      finalDoc.textWithLink("Verify Certificate", 475, 425, { url: verifyLink });
+      finalDoc.text(`Or visit: ${verifyLink}`, 475, 445, { align: "center" });
+
+      // Let user download **final version with verify link**
+      finalDoc.save(`${userName}_${courseName}_certificate.pdf`);
+
+      toast.success("🎉 Certificate issued & uploaded!");
+      fetchCertificates();
+    } else {
+      toast.error(data.message);
+    }
   } catch (err) {
     toast.error("Certificate error: " + err.message);
   }
 };
-
-
 
 
   const isCourseCompleted =

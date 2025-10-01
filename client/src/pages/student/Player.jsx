@@ -13,7 +13,7 @@ import jsPDF from "jspdf"
 
 const Player = ({ }) => {
 
-  const { enrolledCourses, backendUrl, getToken, calculateChapterTime, userData, fetchUserEnrolledCourses } = useContext(AppContext)
+  const { enrolledCourses, backendUrl, getToken, calculateChapterTime, userData, fetchUserEnrolledCourses, issueCertificate } = useContext(AppContext)
 
   const { courseId } = useParams()
   const [courseData, setCourseData] = useState(null)
@@ -113,29 +113,28 @@ const generateCertificate = (cert) => {
   doc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
 
   // Student Name
-  doc.setFont("times", "bold");
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(28);
-  doc.text(userName, 421, 270, { align: "center" });
+  doc.text(userName, 478, 265, { align: "center" });
 
   // Course Name
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
-  doc.text(courseName, 421, 335, { align: "center" });
+  doc.text(courseName, 475, 355, { align: "center" });
 
   // Issue Date
   doc.setFont("helvetica", "italic");
   doc.setFontSize(14);
-  doc.text(`Date: ${issueDate}`, 150, 520);
+  doc.text(issueDate, 270, 47, { align: "center" });
 
   // Verification Link
-  doc.setFont("courier", "normal");
+  doc.setFont("helvetica", "normal");
   doc.setFontSize(12);
-  doc.setTextColor(0, 0, 255); // Blue text
-  doc.textWithLink("Verify Certificate", 650, 520, { url: verifyLink });
-
+  doc.setTextColor(0, 0, 255);
+  doc.text(verifyLink, 650, 540, { align: "left", maxWidth: 150 });
   // Save file
   doc.save(`${userName}_${courseName}_certificate.pdf`);
-  toast.success("🎉 Certificate downloaded!");
+  toast.success("Certificate downloaded!");
 };
 
 

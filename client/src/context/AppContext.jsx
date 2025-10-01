@@ -191,7 +191,7 @@ const issueCertificate = async (courseId) => {
       { headers: { Authorization: `Bearer ${token}` } }
     );
     if (data.success) {
-      toast.success("🎉 Certificate issued!");
+      toast.success("Certificate issued!");
       fetchCertificates(); // refresh
       return data.certificate;
     } else {

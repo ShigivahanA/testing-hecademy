@@ -66,17 +66,24 @@ const VerifyCertificate = () => {
 
       {/* LinkedIn Share */}
       <div className="mt-6">
-        <a
-          href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
-            window.location.origin + "/verify/" + certificate.certificateId
-          )}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-        >
-          🔗 Share on LinkedIn
-        </a>
-      </div>
+<a
+  href={`https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME
+    &name=${encodeURIComponent(certificate.courseId?.courseTitle || "Course Certificate")}
+    &organizationName=${encodeURIComponent("Hecademy")}
+    &issueYear=${new Date(certificate.issueDate).getFullYear()}
+    &issueMonth=${new Date(certificate.issueDate).getMonth() + 1}
+    &credentialID=${encodeURIComponent(certificate.certificateId)}
+    &credentialURL=${encodeURIComponent(window.location.origin + "/verify/" + certificate.certificateId)}
+  `}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+>
+  📜 Add to LinkedIn Profile
+</a>
+
+</div>
+
     </div>
   );
 };

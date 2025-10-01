@@ -58,6 +58,7 @@ const App = () => {
             <Route path="my-courses" element={<MyCourses />} />
             <Route path="student-enrolled" element={<StudentsEnrolled />} />
           </Route>
+          <Route path="/verify/:id" element={<VerifyCertificate backendUrl={backendUrl} />} />
         </Routes>
       </div>
 

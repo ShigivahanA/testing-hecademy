@@ -23,6 +23,7 @@ export const AppContextProvider = (props) => {
     const [userData, setUserData] = useState(null)
     const [enrolledCourses, setEnrolledCourses] = useState([])
     const [pendingCourses, setPendingCourses] = useState([])
+    const [certificates, setCertificates] = useState([]);
 
     // Fetch All Courses
     const fetchAllCourses = async () => {
@@ -166,6 +167,39 @@ const fetchRecommendations = async () => {
     toast.error(error.message)
   }
 }
+const fetchCertificates = async () => {
+  try {
+    const token = await getToken();
+    const { data } = await axios.get(backendUrl + "/api/certificates/my-certificates", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (data.success) {
+      setCertificates(data.certificates);
+    }
+  } catch (error) {
+    toast.error(error.message);
+  }
+};
+
+const issueCertificate = async (courseId) => {
+  try {
+    const token = await getToken();
+    const { data } = await axios.post(
+      backendUrl + "/api/certificates/issue",
+      { courseId },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (data.success) {
+      toast.success("🎉 Certificate issued!");
+      fetchCertificates(); // refresh
+      return data.certificate;
+    } else {
+      toast.error(data.message);
+    }
+  } catch (error) {
+    toast.error(error.message);
+  }
+};
 
     const value = {
         showLogin, setShowLogin,
@@ -175,7 +209,7 @@ const fetchRecommendations = async () => {
         enrolledCourses, fetchUserEnrolledCourses,
         calculateChapterTime, calculateCourseDuration,
         calculateRating, calculateNoOfLectures,
-        isEducator,setIsEducator, recommendations, fetchRecommendations
+        isEducator,setIsEducator, recommendations, fetchRecommendations ,certificates, fetchCertificates, issueCertificate
     }
 
 

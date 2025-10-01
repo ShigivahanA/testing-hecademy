@@ -35,6 +35,7 @@ import play_icon from './play_icon.svg'
 import blue_tick_icon from './blue_tick_icon.svg'
 import lesson_icon from './lesson_icon.svg'
 import bookflip from './bookflip.gif'
+import certificateTemplate from './certificateTemplate.png'
 
 
 export const assets = {
@@ -53,6 +54,7 @@ export const assets = {
     profile_img_2,
     profile_img_3,
     arrow_icon,
+    certificateTemplate,
     dropdown_icon,
     cross_icon,
     upload_area,

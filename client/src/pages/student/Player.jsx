@@ -101,63 +101,44 @@ const Player = ({ }) => {
   }
 
 
-const generateCertificate = () => {
-  const userName = userData?.name || "Learner";
+const generateCertificate = (cert) => {
+  const userName = userData?.name || "Student";
   const courseName = courseData?.courseTitle || "Unnamed Course";
-  const issueDate = new Date().toLocaleDateString();
+  const issueDate = new Date(cert.issueDate).toLocaleDateString();
+  const verifyLink = `${window.location.origin}/verify/${cert.certificateId}`;
 
-  const doc = new jsPDF("landscape");
+  const doc = new jsPDF("landscape", "pt", "a4"); // A4 landscape
 
-  // 🎨 Background
-  doc.setFillColor(240, 248, 255);
-  doc.rect(0, 0, 297, 210, "F");
+  // Use your uploaded template as background
+  doc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
 
-  // 🏫 Logo (relaxed size & spacing)
-  const logo = assets.logo;
-  if (logo) {
-    doc.addImage(logo, "PNG", 20, 20, 35, 18); // smaller & lower
-  }
-
-  // 🏆 Title
-  doc.setFont("helvetica", "bold");
+  // Student Name
+  doc.setFont("times", "bold");
   doc.setFontSize(28);
-  doc.text("Certificate of Completion", 148, 60, { align: "center" });
+  doc.text(userName, 421, 270, { align: "center" });
 
-  // 👤 Name
-  doc.setFont("times", "italic");
-  doc.setFontSize(22);
-  doc.text(userName, 148, 90, { align: "center" });
-
-  // 📘 Subtitle
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(16);
-  doc.text("has successfully completed the course", 148, 105, { align: "center" });
-
-  // 📚 Course Name
+  // Course Name
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.text(`"${courseName}"`, 148, 120, { align: "center" });
+  doc.setFontSize(22);
+  doc.text(courseName, 421, 335, { align: "center" });
 
-  // 📅 Date
+  // Issue Date
   doc.setFont("helvetica", "italic");
   doc.setFontSize(14);
-  doc.text(`Date: ${issueDate}`, 148, 140, { align: "center" });
+  doc.text(`Date: ${issueDate}`, 150, 520);
 
-  // ✍️ Signature Line + Hecker (above line)
-  doc.setFont("times", "italic");
-  doc.setFontSize(16);
-  doc.text("Hecker", 230, 155); // Hecker above line
-  doc.text("_____________________", 220, 165);
-
-  // 📌 Footer
+  // Verification Link
+  doc.setFont("courier", "normal");
   doc.setFontSize(12);
-  doc.setFont("helvetica", "italic");
-  doc.text("Hecademy • Your Brain's Upgrade", 148, 190, { align: "center" });
+  doc.setTextColor(0, 0, 255); // Blue text
+  doc.textWithLink("Verify Certificate", 650, 520, { url: verifyLink });
 
-  // 💾 Save PDF
+  // Save file
   doc.save(`${userName}_${courseName}_certificate.pdf`);
   toast.success("🎉 Certificate downloaded!");
 };
+
+
 
 
 
@@ -274,10 +255,13 @@ if (!courseData) {
                 Claim your certificate by clicking the button below!
               </h1>
               <button
-                onClick={generateCertificate}
+                onClick={async () => {
+    const cert = await issueCertificate(courseData._id);
+    if (cert) generateCertificate(cert);
+  }}
                 className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white font-medium text-lg rounded-lg hover:bg-green-700 transition"
               >
-                Generate Certificate
+                Download Certificate
               </button>
             </div>
         )}

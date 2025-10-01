@@ -101,39 +101,67 @@ const Player = ({ }) => {
   }
 
 
-const generateCertificate = (cert) => {
+const generateCertificate = async (cert) => {
   const userName = userData?.name || "Student";
   const courseName = courseData?.courseTitle || "Unnamed Course";
   const issueDate = new Date(cert.issueDate).toLocaleDateString();
   const verifyLink = `${window.location.origin}/verify/${cert.certificateId}`;
 
-  const doc = new jsPDF("landscape", "pt", "a4"); // A4 landscape
+  const doc = new jsPDF("landscape", "pt", "a4");
 
-  // Use your uploaded template as background
+  // Template background
   doc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
 
-  // Student Name
+  // Name
   doc.setFont("helvetica", "bold");
   doc.setFontSize(28);
   doc.text(userName, 478, 265, { align: "center" });
 
-  // Course Name
+  // Course
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
   doc.text(courseName, 475, 355, { align: "center" });
 
-  // Issue Date
+  // Date
   doc.setFont("helvetica", "italic");
   doc.setFontSize(14);
   doc.text(issueDate, 270, 47, { align: "center" });
 
-  // Verification Link
+  // Verification link
   doc.setFont("helvetica", "normal");
   doc.setFontSize(12);
   doc.text(`Verify here: ${verifyLink}`, 475, 425, { align: "center" });
-  // Save file
+
+  // Save locally first
   doc.save(`${userName}_${courseName}_certificate.pdf`);
-  toast.success("Certificate downloaded!");
+
+  // Then upload to Cloudinary
+  const pdfBlob = doc.output("blob");
+  const formData = new FormData();
+  formData.append("file", pdfBlob, `${userName}_${courseName}.pdf`);
+  formData.append("upload_preset", import.meta.env.VITE_CLOUDINARY_PRESET);
+
+  try {
+    const cloudRes = await fetch(
+      `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_NAME}/upload`,
+      { method: "POST", body: formData }
+    );
+
+    const cloudData = await cloudRes.json();
+    const certificateUrl = cloudData.secure_url;
+
+    // Save in backend DB
+    const token = await getToken();
+    await axios.post(
+      backendUrl + "/api/certificates/issue",
+      { courseId: courseData._id, certificateUrl },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    toast.success("Certificate uploaded & saved!");
+  } catch (err) {
+    toast.error("Upload failed: " + err.message);
+  }
 };
 
 

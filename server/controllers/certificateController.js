@@ -6,7 +6,7 @@ import Course from "../models/Course.js";
 export const issueCertificate = async (req, res) => {
   try {
     const userId = req.auth.userId; // Clerk auth
-    const { courseId } = req.body;
+    const { courseId, certificateUrl } = req.body;
 
     // Ensure user & course exist
     const user = await User.findOne({ _id: userId });  // FIXED
@@ -27,6 +27,7 @@ export const issueCertificate = async (req, res) => {
       userId,
       courseId,
       certificateId,
+      certificateUrl,
     });
 
     res.json({ success: true, certificate: newCertificate });

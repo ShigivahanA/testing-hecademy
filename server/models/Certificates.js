@@ -6,11 +6,12 @@ const CertificateSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    courseId: { type: mongoose.Schema.Types.ObjectId,
+  courseId: { type: mongoose.Schema.Types.ObjectId,
         ref: 'Course',
         required: true
     },
-      certificateId: { type: String, unique: true, required: true },
+  certificateId: { type: String, unique: true, required: true },
+  certificateUrl: { type: String },
   issueDate: { type: Date, default: Date.now },
 }, { timestamps: true });
 

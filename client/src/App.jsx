@@ -15,6 +15,7 @@ import { ToastContainer } from 'react-toastify'
 import Player from './pages/student/Player'
 import MyEnrollments from './pages/student/MyEnrollments'
 import Loading from './components/student/Loading'
+import VerifyCertificate from './pages/student/VerifyCertificate'
 
 const App = () => {
   const isEducatorRoute = useMatch('/educator/*')
@@ -58,7 +59,7 @@ const App = () => {
             <Route path="my-courses" element={<MyCourses />} />
             <Route path="student-enrolled" element={<StudentsEnrolled />} />
           </Route>
-          <Route path="/verify/:id" element={<VerifyCertificate backendUrl={backendUrl} />} />
+          <Route path="/verify/:id" element={<VerifyCertificate />} />
         </Routes>
       </div>
 

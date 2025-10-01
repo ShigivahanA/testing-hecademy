@@ -30,7 +30,7 @@ app.use('/api/educator', express.json(), educatorRouter)
 app.use('/api/course', express.json(), courseRouter)
 app.use('/api/user', express.json(), userRouter)
 app.use('/api/recommendations', express.json(), recommendationRouter)
-app.use("/api/certificates", certificateRoutes);
+app.use("/api/certificates",express.json(), certificateRoutes);
 
 // Port
 const PORT = process.env.PORT || 5000

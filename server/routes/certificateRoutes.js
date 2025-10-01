@@ -3,8 +3,8 @@ import { issueCertificate, verifyCertificate, getUserCertificates } from "../con
 
 const certificaterouter = express.Router();
 
-router.post("/issue", issueCertificate);
-router.get("/verify/:id", verifyCertificate);
-router.get("/my-certificates", getUserCertificates);
+certificaterouter.post("/issue", issueCertificate);
+certificaterouter.get("/verify/:id", verifyCertificate);
+certificaterouter.get("/my-certificates", getUserCertificates);
 
 export default certificaterouter;

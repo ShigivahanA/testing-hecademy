@@ -106,54 +106,80 @@ const generateCertificate = async () => {
   const courseName = courseData?.courseTitle || "Unnamed Course";
 
   try {
-    // Generate PDF
+    // 👉 Generate PDF with jsPDF
     const doc = new jsPDF("landscape", "pt", "a4");
     doc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
 
+    // Student Name
     doc.setFont("helvetica", "bold");
     doc.setFontSize(28);
     doc.text(userName, 478, 265, { align: "center" });
 
+    // Course Name
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
     doc.text(courseName, 475, 355, { align: "center" });
 
+    // Issue Date
     const issueDate = new Date().toLocaleDateString();
     doc.setFont("helvetica", "italic");
     doc.setFontSize(14);
     doc.text(issueDate, 270, 47, { align: "center" });
 
-    // 👉 Save locally
-    doc.save(`${userName}_${courseName}_certificate.pdf`);
-
-    // 👉 Convert PDF to Blob
+    // 👉 Convert PDF → Blob
     const pdfBlob = new Blob([doc.output("arraybuffer")], {
       type: "application/pdf",
     });
 
-    // 👉 Create FormData just like addCourse
-    const formData = new FormData();
-    formData.append("courseId", courseData._id);
-    formData.append("certificateFile", pdfBlob, `${userName}_${courseName}.pdf`);
+    // Step 1: Ask backend to issue & get certId
+    const cert = await issueCertificate(courseData._id, pdfBlob);
+    if (!cert) return;
 
-    // Send to backend
-    const token = await getToken();
-    const { data } = await axios.post(
-      backendUrl + "/api/certificates/issue",
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      }
+    // Step 2: Add verify link using real certificateId
+    const verifyLink = `${window.location.origin}/verify/${cert.certificateId}`;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.textWithLink("Verify Certificate", 475, 425, { url: verifyLink });
+    doc.text(`Or visit: ${verifyLink}`, 475, 445, { align: "center" });
+
+    // 👉 Save locally as PDF
+    doc.save(`${userName}_${courseName}_certificate.pdf`);
+
+    // 👉 Also upload PNG version for display
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Convert first PDF page to image
+    const imgData = doc.output("datauristring");
+    const img = new Image();
+    img.src = imgData;
+    await new Promise((resolve) => (img.onload = resolve));
+
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+
+    const pngBlob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/png")
     );
 
-    if (data.success) {
-      toast.success("🎉 Certificate issued!");
-    } else {
-      toast.error(data.message);
-    }
+    const pngFile = new File([pngBlob], "certificate.png", {
+      type: "image/png",
+    });
+
+    const token = await getToken();
+    const formData = new FormData();
+    formData.append("courseId", courseData._id);
+    formData.append("certificateFile", pngFile);
+
+    await axios.post(backendUrl + "/api/certificates/issue", formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    toast.success("🎉 Certificate issued, saved (PDF) & uploaded (PNG)!");
   } catch (err) {
     toast.error("Certificate error: " + err.message);
   }

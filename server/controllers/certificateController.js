@@ -29,10 +29,12 @@ export const issueCertificate = async (req, res) => {
     }
 
     // Upload to Cloudinary
-    const uploadRes = await cloudinary.uploader.upload(file.path, {
-      folder: "certificates",
-      resource_type: "auto", // auto-detect pdf/image
-    });
+const uploadRes = await cloudinary.uploader.upload(file.path, {
+  folder: "certificates",
+  resource_type: "image",   // ✅ force image (png/jpg only)
+  format: "png",            // ✅ convert to png
+});
+
 
     // Save in DB
     const certificateId = Math.random().toString(36).substr(2, 9).toUpperCase();

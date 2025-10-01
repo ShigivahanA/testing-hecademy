@@ -171,9 +171,10 @@ const fetchRecommendations = async () => {
 const fetchCertificates = async () => {
   try {
     const token = await getToken();
-    const { data } = await axios.get(backendUrl + "/api/certificates/my-certificates", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const { data } = await axios.get(
+      backendUrl + "/api/certificates/my-certificates",
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
     if (data.success) {
       setCertificates(data.certificates);
     }
@@ -182,17 +183,33 @@ const fetchCertificates = async () => {
   }
 };
 
-const issueCertificate = async (courseId) => {
+// Issue Certificate (expects courseId + pdfBlob)
+const issueCertificate = async (courseId, pdfBlob) => {
   try {
     const token = await getToken();
+
+    // 👉 Prepare FormData
+    const formData = new FormData();
+    formData.append("courseId", courseId);
+    formData.append(
+      "certificateFile",
+      new File([pdfBlob], "certificate.pdf", { type: "application/pdf" })
+    );
+
     const { data } = await axios.post(
       backendUrl + "/api/certificates/issue",
-      { courseId },
-      { headers: { Authorization: `Bearer ${token}` } }
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
     );
+
     if (data.success) {
-      toast.success("Certificate issued!");
-      fetchCertificates(); // refresh
+      toast.success("🎉 Certificate issued!");
+      fetchCertificates(); // refresh list
       return data.certificate;
     } else {
       toast.error(data.message);
@@ -201,6 +218,7 @@ const issueCertificate = async (courseId) => {
     toast.error(error.message);
   }
 };
+
 
     const value = {
         showLogin, setShowLogin,

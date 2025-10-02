@@ -21,40 +21,56 @@ const VerifyCertificate = () => {
           setCertificate(data.certificate);
         } else {
           setCertificate(false);
-          toast.error(data.message);
+          // toast.error(data.message);
         }
       } catch (error) {
-        toast.error(error.message);
+        // toast.error(error.message);
         setCertificate(false);
       }
     };
     fetchCertificate();
   }, [id, backendUrl]);
 
-  // ❌ Invalid certificate
-  if (certificate === false) {
-    return (
-      <>
-        <div className="min-h-screen flex flex-col justify-center items-center bg-red-50">
-          <XCircle className="w-16 h-16 text-red-600 mb-4" />
-          <h1 className="text-3xl font-bold text-red-600">Invalid Certificate</h1>
+// ❌ Invalid certificate
+if (certificate === false) {
+  return (
+    <>
+      <div className="min-h-screen flex flex-col justify-start mt-20 items-center px-6">
+        <div className="bg-white shadow-lg rounded-xl p-8 max-w-md text-center border-t-8 border-red-600">
+          <XCircle className="w-16 h-16 text-red-600 mx-auto mb-4 animate-bounce" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-red-600">
+            Invalid Certificate
+          </h1>
           <p className="mt-3 text-gray-600">
-            No record found for this certificate ID.
+            No record found for this certificate ID. Please check the link or contact support.
           </p>
+          <a
+            href="/"
+            className="mt-6 inline-block px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+          >
+            Back to Home
+          </a>
         </div>
-        <Footer />
-      </>
-    );
-  }
-
-  // ⏳ Loading
-  if (!certificate) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-600">
-        Checking certificate validity...
       </div>
-    );
-  }
+      <Footer />
+    </>
+  );
+}
+
+// ⏳ Loading
+if (!certificate) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+      <div className="flex flex-col items-center animate-pulse">
+        <CheckCircle className="w-12 h-12 text-blue-500 mb-4" />
+        <p className="text-lg sm:text-xl font-medium text-gray-600">
+          Checking certificate validity...
+        </p>
+      </div>
+    </div>
+  );
+}
+
 
   // ✅ Valid certificate
   return (

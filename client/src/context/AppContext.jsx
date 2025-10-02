@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import humanizeDuration from "humanize-duration";
+import jsPDF from "jspdf";
+import { assets } from '../assets/assets'
 
 export const AppContext = createContext()
 
@@ -18,6 +20,7 @@ export const AppContextProvider = (props) => {
 
     const [showLogin, setShowLogin] = useState(false)
     const [recommendations, setRecommendations] = useState([]);
+    const [loadingUser, setLoadingUser] = useState(true);
     const [isEducator,setIsEducator] = useState(false)
     const [allCourses, setAllCourses] = useState([])
     const [userData, setUserData] = useState(null)
@@ -45,30 +48,41 @@ export const AppContextProvider = (props) => {
     }
 
     // Fetch UserData 
-    const fetchUserData = async () => {
+const fetchUserData = async () => {
+  try {
+    const token = await getToken();
 
-        try {
-
-            if (user.publicMetadata.role === 'educator') {
-                setIsEducator(true)
-            }
-
-            const token = await getToken();
-
-            const { data } = await axios.get(backendUrl + '/api/user/data',
-                { headers: { Authorization: `Bearer ${token}` } })
-
-            if (data.success) {
-                setUserData(data.user)
-            } else (
-                toast.error(data.message)
-            )
-
-        } catch (error) {
-            toast.error(error.message)
-        }
-
+    if (!token) {
+      // user is logged out
+      setUserData(null);
+      setIsEducator(false);
+      return;
     }
+
+    // if logged in and has educator role
+    if (user?.publicMetadata?.role === 'educator') {
+      setIsEducator(true);
+    }
+
+    // fetch user data with token
+    const { data } = await axios.get(backendUrl + '/api/user/data', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (data.success) {
+      setUserData(data.user);
+    } else {
+      setUserData(null); // reset if API fails
+      toast.error(data.message);
+    }
+  } catch (error) {
+    setUserData(null); // ensure cleared on error
+    toast.error(error.message);
+  } finally {
+    setLoadingUser(false);
+  }
+};
+
 
     // Fetch User Enrolled Courses
     const fetchUserEnrolledCourses = async () => {
@@ -184,6 +198,59 @@ const fetchCertificates = async () => {
 };
 
 
+const generateCertificateForCourse = async (course, user) => {
+  try {
+    if (!course || !user) return;
+
+    const token = await getToken();
+    if (!token) return;
+
+    const userName = user.name || "Student";
+    const courseName = course.courseTitle || "Unnamed Course";
+    const issueDate = new Date().toLocaleDateString();
+
+    // Step 1: Create base doc
+    const doc = new jsPDF("landscape", "pt", "a4");
+    doc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(28);
+    doc.text(userName, 478, 265, { align: "center" });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text(courseName, 475, 355, { align: "center" });
+
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(14);
+    doc.text(issueDate, 270, 47, { align: "center" });
+
+    // Step 2: Convert to PNG for backend upload
+    const imgData = doc.output("datauristring");
+    const pngBlob = await (await fetch(imgData)).blob();
+    const pngFile = new File([pngBlob], "certificate.png", { type: "image/png" });
+
+    const formData = new FormData();
+    formData.append("courseId", course._id);
+    formData.append("certificateFile", pngFile);
+
+    // Step 3: Upload to backend → Cloudinary
+    const { data } = await axios.post(backendUrl + "/api/certificates/issue", formData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (data.success) {
+      toast.success("Certificate issued!");
+      fetchCertificates();
+      return data.certificate;
+    } else {
+      toast.error(data.message);
+    }
+  } catch (err) {
+    toast.error("Certificate generation failed: " + err.message);
+  }
+};
+
 
     const value = {
         showLogin, setShowLogin,
@@ -193,7 +260,7 @@ const fetchCertificates = async () => {
         enrolledCourses, fetchUserEnrolledCourses,
         calculateChapterTime, calculateCourseDuration,
         calculateRating, calculateNoOfLectures,
-        isEducator,setIsEducator, recommendations, fetchRecommendations ,certificates, fetchCertificates
+        isEducator,setIsEducator, recommendations, fetchRecommendations ,certificates, fetchCertificates, generateCertificateForCourse,loadingUser
     }
 
 

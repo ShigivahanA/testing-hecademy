@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState  } from 'react'
 import { AppContext } from '../../context/AppContext'
 import YouTube from 'react-youtube';
 import { assets } from '../../assets/assets';
@@ -249,7 +249,14 @@ const Player = ({ }) => {
                           <div className="flex gap-3 text-gray-600 text-[10px] sm:text-xs md:text-sm">
                             {lecture.lectureUrl && (
                               <p
-                                onClick={() => setPlayerData({ ...lecture, chapter: index + 1, lecture: i + 1 })}
+                                onClick={() => {
+                                    setPlayerData({ ...lecture, chapter: index + 1, lecture: i + 1 });
+
+                                    // ✅ scroll to top of page after setting playerData
+                                    setTimeout(() => {
+                                      window.scrollTo({ top: 0, behavior: "smooth" });
+                                    }, 100);
+                                  }}
                                 className="text-blue-500 cursor-pointer hover:underline"
                               >
                                 Watch
@@ -297,7 +304,7 @@ const Player = ({ }) => {
         </div>
 
         {/* RIGHT: Video Player */}
-        <div className="lg:mt-10 order-1">
+        <div className="lg:mt-10 order-1" id="video-player">
           {playerData ? (
             <div>
               <YouTube iframeClassName="w-full aspect-video rounded-lg shadow" videoId={playerData.lectureUrl.split('/').pop()} />

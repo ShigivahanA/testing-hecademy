@@ -42,7 +42,7 @@ if (certificate === false) {
             Invalid Certificate
           </h1>
           <p className="mt-3 text-gray-600">
-            No record found for this certificate ID. Please check the link or contact support.
+            No record found for this certificate ID. Please check the link or contact hecademysupport@gmail.com.
           </p>
           <a
             href="/"
@@ -142,7 +142,7 @@ if (!certificate) {
 
           {/* Fallback note if LinkedIn ignores issueMonth */}
           <p className="mt-3 text-sm text-gray-500">
-            If the month doesn’t updated automatically, please select{" "}
+            If the month doesn’t update automatically, please select{" "}
             <strong>
               {new Date(certificate.issueDate).toLocaleString("default", {
                 month: "long", year:'numeric'

@@ -281,7 +281,7 @@ const generateConsecutiveStreak = async (progressList) => {
             />
             <InsightCard
               title="Current Streak"
-              value={`${streakCount} days`}
+              value={`${streakCount} ${streakCount === 1 ? "day" : "days"}`}
               color="bg-red-100"
             />
           </div>
@@ -315,7 +315,7 @@ const generateConsecutiveStreak = async (progressList) => {
             {/* Daily Streak */}
             <div className="bg-white rounded-xl p-6 border border-gray-200">
               <h2 className="text-xl font-semibold text-gray-800 mb-6">
-                Daily Learning Streak
+                Daily Learning Hours
               </h2>
 
               <ResponsiveContainer width="100%" height={250}>

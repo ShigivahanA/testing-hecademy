@@ -21,23 +21,12 @@ const CodeEditor = () => {
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { backendUrl, getToken, navigate } = useContext(AppContext);
+  const { backendUrl, getToken } = useContext(AppContext);
   const { user, isLoaded } = useUser();
 
-  // Redirect unauthenticated users
   useEffect(() => {
-    if (isLoaded && !user) {
-      navigate("/");
-    }
-  }, [isLoaded, user, navigate]);
-
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex justify-center items-center bg-gray-50 text-gray-500">
-        Loading Code Editor...
-      </div>
-    );
-  }
+    window.scrollTo(0, 0);
+  }, []);
 
   const handleRunCode = async () => {
     setLoading(true);
@@ -75,22 +64,41 @@ const CodeEditor = () => {
     }
   };
 
-  if (!user) {
+  // 🧑‍💻 If user is not logged in (like MyEnrollments)
+  if (isLoaded && !user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-gray-600">
-        <h1 className="text-2xl font-semibold mb-4">
-          Please sign in to use the Code Editor
-        </h1>
-        <button
-          onClick={() => navigate("/")}
-          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-        >
-          Go to Home
-        </button>
+      <>
+        <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 text-gray-600 px-4">
+          <div className="max-w-md text-center">
+            <h1 className="text-2xl font-semibold mb-3 text-gray-800">
+              Code Editor
+            </h1>
+            <p className="text-gray-500 mb-6">
+              Please log in to use the Code Editor and run your code securely.
+            </p>
+            <a
+              href="/"
+              className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+            >
+              Go to Home
+            </a>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  // 🕓 Show loader while Clerk is loading
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex justify-center items-center bg-gray-50 text-gray-500">
+        Loading Code Editor...
       </div>
     );
   }
 
+  // ✅ Authenticated User View
   return (
     <>
       <div className="min-h-screen bg-gradient-to-b from-cyan-50 to-gray-50 py-10 px-6 lg:px-36 transition-all">

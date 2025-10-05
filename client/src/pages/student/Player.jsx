@@ -56,27 +56,36 @@ const Player = ({ }) => {
   }, [userData, loadingUser, navigate]);
 
   const markLectureAsCompleted = async (lectureId) => {
-    if (!userData) return;
-    try {
-      const token = await getToken();
-      if (!token) return;
+  if (!userData || !courseData) return;
 
-      const { data } = await axios.post(backendUrl + '/api/user/update-course-progress',
-        { courseId, lectureId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
+  try {
+    const token = await getToken();
+    if (!token) return;
 
-      if (data.success) {
-        toast.success(data.message)
-        getCourseProgress()
-      } else {
-        toast.error(data.message)
-      }
+    // ✅ find the lecture duration dynamically
+    const lecture = courseData.courseContent
+      .flatMap((ch) => ch.chapterContent)
+      .find((lec) => lec.lectureId === lectureId);
 
-    } catch (error) {
-      toast.error(error.message)
+    const lectureDuration = lecture?.lectureDuration || 0; // duration in minutes
+
+    const { data } = await axios.post(
+      backendUrl + "/api/user/update-course-progress",
+      { courseId, lectureId, duration: lectureDuration }, // ✅ send duration too
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (data.success) {
+      toast.success(data.message);
+      getCourseProgress();
+    } else {
+      toast.error(data.message);
     }
+  } catch (error) {
+    toast.error(error.message);
   }
+};
+
 
   const getCourseProgress = async () => {
     if (!userData) return; 
@@ -240,7 +249,10 @@ const Player = ({ }) => {
                     {chapter.chapterContent.map((lecture, i) => (
                       <li key={i} className="flex items-start gap-2 py-1 text-xs sm:text-sm md:text-base">
                         <img
-                          src={progressData && progressData.lectureCompleted.includes(lecture.lectureId) ? assets.blue_tick_icon : assets.play_icon}
+                          src={progressData &&
+Array.isArray(progressData.lectureCompleted) &&
+progressData.lectureCompleted.some((lec) => lec.lectureId === lecture.lectureId)
+ ? assets.blue_tick_icon : assets.play_icon}
                           alt="bullet"
                           className="w-3 h-3 sm:w-4 sm:h-4 mt-1 flex-shrink-0"
                         />
@@ -313,7 +325,10 @@ const Player = ({ }) => {
                   {playerData.chapter}.{playerData.lecture} {playerData.lectureTitle}
                 </p>
                 <button onClick={() => markLectureAsCompleted(playerData.lectureId)} className="text-blue-600 text-sm sm:text-base">
-                  {progressData && progressData.lectureCompleted.includes(playerData.lectureId) ? 'Completed' : 'Mark Complete'}
+                  {progressData &&
+progressData.lectureCompleted?.some(
+  (lec) => lec.lectureId === playerData.lectureId
+) ? 'Completed' : 'Mark Complete'}
                 </button>
               </div>
             </div>

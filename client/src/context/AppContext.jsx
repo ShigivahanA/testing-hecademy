@@ -200,6 +200,33 @@ const fetchCertificates = async () => {
   }
 };
 
+// ✅ Update user progress (send lecture duration too)
+const updateUserCourseProgress = async (courseId, lectureId, duration) => {
+  try {
+    const token = await getToken();
+    if (!token) return;
+
+    const { data } = await axios.post(
+      backendUrl + "/api/user/update-course-progress",
+      {
+        courseId,
+        lectureId,
+        duration: duration || 0, // lectureDuration in minutes
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    if (data.success) {
+      console.log("✅ Progress updated:", data.message);
+    } else {
+      toast.error(data.message);
+    }
+  } catch (error) {
+    toast.error(error.message);
+  }
+};
+
+
 
 const generateCertificateForCourse = async (course, user) => {
   try {
@@ -263,7 +290,9 @@ const generateCertificateForCourse = async (course, user) => {
         enrolledCourses, fetchUserEnrolledCourses,
         calculateChapterTime, calculateCourseDuration,
         calculateRating, calculateNoOfLectures,
-        isEducator,setIsEducator, recommendations, fetchRecommendations ,certificates, fetchCertificates, generateCertificateForCourse,loadingUser
+        isEducator,setIsEducator, recommendations, 
+        fetchRecommendations ,certificates, fetchCertificates, 
+        generateCertificateForCourse, loadingUser, updateUserCourseProgress
     }
 
 

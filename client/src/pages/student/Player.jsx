@@ -112,7 +112,8 @@ const Player = ({ }) => {
   const downloadCertificatePDF = (course, user, certificate) => {
     const userName = user?.name || "Student";
     const courseName = course?.courseTitle || "Unnamed Course";
-    const issueDate = new Date(certificate?.issueDate || Date.now()).toLocaleDateString();
+    const rawDate = new Date(certificate?.issueDate || Date.now());
+    const issueDate = `${rawDate.getDate()}-${rawDate.getMonth() + 1}-${rawDate.getFullYear()}`;
     const verifyLink = `${window.location.origin}/verify/${certificate?.certificateId}`;
 
     const doc = new jsPDF("landscape", "pt", "a4");

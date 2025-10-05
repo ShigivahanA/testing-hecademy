@@ -47,37 +47,37 @@ const Dashboard = () => {
           <div className='flex items-center gap-3 shadow-card border border-blue-500 p-4 w-56 rounded-md'>
             <img src={assets.patients_icon} alt="patients_icon" />
             <div>
-              <p className='text-2xl font-medium text-gray-600'>{dashboardData.enrolledStudentsData.length}</p>
-              <p className='text-base text-gray-500'>Total Enrolments</p>
+              <p className='text-xl md:text-2xl font-medium text-gray-600'>{dashboardData.enrolledStudentsData.length}</p>
+              <p className='text-sm md:text-base text-gray-500'>Total Enrolments</p>
             </div>
           </div>
           <div className='flex items-center gap-3 shadow-card border border-blue-500 p-4 w-56 rounded-md'>
             <img src={assets.appointments_icon} alt="patients_icon" />
             <div>
-              <p className='text-2xl font-medium text-gray-600'>{dashboardData.totalCourses}</p>
-              <p className='text-base text-gray-500'>Total Courses</p>
+              <p className='text-xl md:text-2xl font-medium text-gray-600'>{dashboardData.totalCourses}</p>
+              <p className='text-sm md:text-base text-gray-500'>Total Courses</p>
             </div>
           </div>
           <div className='flex items-center gap-3 shadow-card border border-blue-500 p-4 w-56 rounded-md'>
             <img src={assets.earning_icon} alt="patients_icon" />
             <div>
-              <p className='text-2xl font-medium text-gray-600'>{currency}{Math.floor(dashboardData.totalEarnings)}</p>
-              <p className='text-base text-gray-500'>Total Earnings</p>
+              <p className='text-xl md:text-2xl font-medium text-gray-600'>{currency}{Math.floor(dashboardData.totalEarnings)}</p>
+              <p className='text-sm md:text-base text-gray-500'>Total Earnings</p>
             </div>
           </div>
         </div>
         <div>
-          <h2 className="pb-4 text-lg font-medium">Latest Enrolments</h2>
+          <h2 className="pb-4 text-base md:text-lg font-medium">Latest Enrolments</h2>
           <div className="flex flex-col items-center max-w-4xl w-full overflow-hidden rounded-md bg-white border border-gray-500/20 mb-5">
             <table className="table-fixed md:table-auto w-full overflow-hidden">
-              <thead className="text-gray-900 border-b border-gray-500/20 text-sm text-left">
+              <thead className="text-gray-900 border-b border-gray-500/20 text-xs md:text-sm text-left">
                 <tr>
                   <th className="px-4 py-3 font-semibold text-center hidden sm:table-cell">#</th>
                   <th className="px-4 py-3 font-semibold">Student Name</th>
                   <th className="px-4 py-3 font-semibold">Course Title</th>
                 </tr>
               </thead>
-              <tbody className="text-sm text-gray-500">
+              <tbody className="text-xs md:text-sm text-gray-500">
                 {dashboardData.enrolledStudentsData.map((item, index) => (
                   <tr key={index} className="border-b border-gray-500/20">
                     <td className="px-4 py-3 text-center hidden sm:table-cell">{index + 1}</td>

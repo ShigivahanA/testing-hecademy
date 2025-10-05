@@ -61,10 +61,9 @@ const { user, isLoaded } = useUser();      // 👈 add isLoaded
               <button onClick={becomeEducator}>Educator Dashboard</button>
               </>
             )}{!isEducator && (<>
-              <Link to="/code-editor">Code Editor</Link> |
-              <Link to='/my-enrollments' >My Enrollments</Link></>
+              <Link to="/code-editor">Code Editor</Link>|
+              <Link to='/dashboard'>Dashboard</Link></>
             )}
-            
             </>
             )
           }
@@ -95,7 +94,7 @@ const { user, isLoaded } = useUser();      // 👈 add isLoaded
           </>
         )}
         <Link to="/code-editor">Code Editor</Link> |
-        <Link to="/my-enrollments">My Enrollments</Link>
+        <Link to="/dashboard">Dashboard</Link>
       </>
     )}
         </div>

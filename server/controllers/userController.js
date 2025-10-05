@@ -130,41 +130,55 @@ export const userEnrolledCourses = async (req, res) => {
 
 // Update User Course Progress
 export const updateUserCourseProgress = async (req, res) => {
+  try {
+    const userId = req.auth.userId;
+    const { courseId, lectureId, duration } = req.body; // ✅ include duration
 
-    try {
-
-        const userId = req.auth.userId
-
-        const { courseId, lectureId } = req.body
-
-        const progressData = await CourseProgress.findOne({ userId, courseId })
-
-        if (progressData) {
-
-            if (progressData.lectureCompleted.includes(lectureId)) {
-                return res.json({ success: true, message: 'Lecture Already Completed' })
-            }
-
-            progressData.lectureCompleted.push(lectureId)
-            await progressData.save()
-
-        } else {
-
-            await CourseProgress.create({
-                userId,
-                courseId,
-                lectureCompleted: [lectureId]
-            })
-
-        }
-
-        res.json({ success: true, message: 'Progress Updated' })
-
-    } catch (error) {
-        res.json({ success: false, message: error.message })
+    if (!courseId || !lectureId) {
+      return res.json({ success: false, message: "Missing required fields" });
     }
 
-}
+    let progressData = await CourseProgress.findOne({ userId, courseId });
+
+    if (progressData) {
+      const alreadyDone = progressData.lectureCompleted.some(
+        (lec) => lec.lectureId === lectureId
+      );
+
+      if (alreadyDone) {
+        return res.json({ success: true, message: "Lecture already completed" });
+      }
+
+      // ✅ Store metadata
+      progressData.lectureCompleted.push({
+        lectureId,
+        duration: duration || 0,
+        completedAt: new Date(),
+      });
+
+      // Check if all lectures are done
+      // You can compare count later if course.totalLectures known
+      await progressData.save();
+    } else {
+      progressData = await CourseProgress.create({
+        userId,
+        courseId,
+        lectureCompleted: [
+          {
+            lectureId,
+            duration: duration || 0,
+            completedAt: new Date(),
+          },
+        ],
+      });
+    }
+
+    res.json({ success: true, message: "Progress Updated", progressData });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
 
 // get User Course Progress
 export const getUserCourseProgress = async (req, res) => {

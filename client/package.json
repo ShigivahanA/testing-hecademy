@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.17.1",
-    "axios": "^1.7.8",
+    "@monaco-editor/react": "^4.7.0",
+    "axios": "^1.12.2",
     "humanize-duration": "^3.32.1",
     "jspdf": "^3.0.3",
     "lucide-react": "^0.544.0",

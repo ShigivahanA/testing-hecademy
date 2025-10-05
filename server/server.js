@@ -10,6 +10,7 @@ import educatorRouter from './routes/educatorRoutes.js'
 import courseRouter from './routes/courseRoute.js'
 import recommendationRouter from './routes/recommendationRoutes.js'
 import certificaterouter from "./routes/certificateRoutes.js";
+import codeRouter from "./routes/codeRoutes.js";
 
 // Initialize Express
 const app = express()
@@ -31,6 +32,7 @@ app.use('/api/course', express.json(), courseRouter)
 app.use('/api/user', express.json(), userRouter)
 app.use('/api/recommendations', express.json(), recommendationRouter)
 app.use("/api/certificates",express.json(), certificaterouter);
+app.use("/api/code", express.json(), codeRouter);
 
 // Port
 const PORT = process.env.PORT || 5000

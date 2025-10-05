@@ -59,8 +59,9 @@ const Navbar = () => {
               <>
               <button onClick={becomeEducator}>Educator Dashboard</button>
               </>
-            )}{!isEducator && (
-              <Link to='/my-enrollments' >My Enrollments</Link>
+            )}{!isEducator && (<>
+              <Link to="/code-editor">Code Editor</Link>
+              <Link to='/my-enrollments' >My Enrollments</Link></>
             )}
             
             </>

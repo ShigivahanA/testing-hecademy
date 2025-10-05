@@ -85,16 +85,19 @@ const { user, isLoaded } = useUser();      // 👈 add isLoaded
       {/* For Phone Screens */}
       <div className='md:hidden flex items-center gap-2 sm:gap-5 text-gray-500'>
         <div className="flex items-center gap-1 sm:gap-2 max-sm:text-xs">
-          {user && (
+{user && (
       <>
-        {isEducator && (
+        {isEducator ? (
           <>
             <button onClick={becomeEducator}>Educator Dashboard</button>
+          </>
+        ) : (
+          <>
+            <Link to="/code-editor">Code Editor</Link>
             <span className="mx-1">|</span>
+            <Link to="/dashboard">Dashboard</Link>
           </>
         )}
-        <Link to="/code-editor">Code Editor</Link> |
-        <Link to="/dashboard">Dashboard</Link>
       </>
     )}
         </div>

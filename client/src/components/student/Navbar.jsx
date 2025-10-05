@@ -14,8 +14,9 @@ const Navbar = () => {
 
   const { backendUrl, isEducator, setIsEducator, navigate, getToken } = useContext(AppContext)
 
-  const { openSignIn } = useClerk()
-  const { user } = useUser()
+const { openSignIn, loaded } = useClerk(); // 👈 add loaded
+const { user, isLoaded } = useUser();      // 👈 add isLoaded
+
 
   const becomeEducator = async () => {
 
@@ -60,7 +61,7 @@ const Navbar = () => {
               <button onClick={becomeEducator}>Educator Dashboard</button>
               </>
             )}{!isEducator && (<>
-              <Link to="/code-editor">Code Editor</Link>
+              <Link to="/code-editor">Code Editor</Link> |
               <Link to='/my-enrollments' >My Enrollments</Link></>
             )}
             
@@ -68,11 +69,19 @@ const Navbar = () => {
             )
           }
         </div>
-        {user
-          ? <UserButton />
-          : <button onClick={() => openSignIn()} className="bg-blue-600 text-white px-5 py-2 rounded-full border-[0.5px] border-gray-400 hover:-translate-x-2 duration-500 hover:shadow-[4px_4px_0_#000]">
-            Create Account
-          </button>}
+{!isLoaded || !loaded ? (
+  <div className="animate-pulse w-24 h-6 bg-gray-200 rounded"></div> // skeleton until loaded
+) : user ? (
+  <UserButton />
+) : (
+  <button
+    onClick={() => openSignIn()}
+    className="bg-blue-600 text-white px-5 py-2 rounded-full border-[0.5px] border-gray-400 hover:-translate-x-2 duration-500 hover:shadow-[4px_4px_0_#000]"
+  >
+    Create Account
+  </button>
+)}
+
       </div>
       {/* For Phone Screens */}
       <div className='md:hidden flex items-center gap-2 sm:gap-5 text-gray-500'>
@@ -85,6 +94,7 @@ const Navbar = () => {
             <span className="mx-1">|</span>
           </>
         )}
+        <Link to="/code-editor">Code Editor</Link> |
         <Link to="/my-enrollments">My Enrollments</Link>
       </>
     )}

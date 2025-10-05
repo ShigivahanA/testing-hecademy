@@ -165,6 +165,9 @@ const fetchUserData = async () => {
             fetchUserData()
             fetchUserEnrolledCourses()
             fetchCertificates();
+        }else {
+    setUserData(null);
+    setLoadingUser(false); 
         }
     }, [user])
 

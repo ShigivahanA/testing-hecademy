@@ -1,9 +1,11 @@
 // client/src/pages/student/CodeEditor.jsx
-import React, { useState } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import axios from "axios";
 import Footer from "../../components/student/Footer";
 import { toast } from "react-toastify";
+import { useUser } from "@clerk/clerk-react";
+import { AppContext } from "../../context/AppContext";
 
 const languages = [
   { label: "HTML", value: "html" },
@@ -19,12 +21,30 @@ const CodeEditor = () => {
   const [output, setOutput] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const { backendUrl, getToken, navigate } = useContext(AppContext);
+  const { user, isLoaded } = useUser();
+
+  // Redirect unauthenticated users
+  useEffect(() => {
+    if (isLoaded && !user) {
+      navigate("/");
+    }
+  }, [isLoaded, user, navigate]);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex justify-center items-center bg-gray-50 text-gray-500">
+        Loading Code Editor...
+      </div>
+    );
+  }
+
   const handleRunCode = async () => {
     setLoading(true);
     setOutput("");
 
     try {
-      if (language === "html" || language === "css" || language === "javascript") {
+      if (["html", "css", "javascript"].includes(language)) {
         const html = `
           <html>
             <head><style>${language === "css" ? code : ""}</style></head>
@@ -39,19 +59,15 @@ const CodeEditor = () => {
         return;
       }
 
-      // For Python & Java – use backend execution
-      const { data } = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/code/run`, {
-        language,
-        code,
-      });
+      const token = await getToken();
+      const { data } = await axios.post(
+        `${backendUrl}/api/code/run`,
+        { language, code },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      if (data.success) {
-        setOutput(data.output);
-      } else {
-        setOutput("Error: " + data.error);
-      }
+      setOutput(data.success ? data.output : `Error: ${data.error}`);
     } catch (err) {
-      console.error(err);
       toast.error("Error running code");
       setOutput(err.message);
     } finally {
@@ -59,16 +75,35 @@ const CodeEditor = () => {
     }
   };
 
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 text-gray-600">
+        <h1 className="text-2xl font-semibold mb-4">
+          Please sign in to use the Code Editor
+        </h1>
+        <button
+          onClick={() => navigate("/")}
+          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+        >
+          Go to Home
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-10">
-        <div className="max-w-7xl mx-auto bg-white shadow-md rounded-lg p-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-            <h1 className="text-2xl font-bold text-gray-800">Code Editor</h1>
+      <div className="min-h-screen bg-gradient-to-b from-cyan-50 to-gray-50 py-10 px-6 lg:px-36 transition-all">
+        <div className="bg-white shadow-xl rounded-2xl p-6 sm:p-8 lg:p-10 border border-gray-100">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
+            <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
+              Code Editor
+            </h1>
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="px-3 py-2 border rounded-md bg-gray-100 text-gray-700"
+              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium bg-gray-50 hover:bg-gray-100 transition"
             >
               {languages.map((lang) => (
                 <option key={lang.value} value={lang.value}>
@@ -78,40 +113,54 @@ const CodeEditor = () => {
             </select>
           </div>
 
-          {/* Editor */}
-          <div className="border rounded-md overflow-hidden">
+          {/* Editor Section */}
+          <div className="rounded-lg overflow-hidden border border-gray-200 shadow-inner">
             <Editor
-              height="50vh"
-              language={language === "html" ? "html" : language}
+              height="55vh"
+              language={language}
               theme="vs-dark"
               value={code}
-              onChange={(value) => setCode(value)}
+              onChange={(value) => setCode(value || "")}
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                scrollBeyondLastLine: false,
+                smoothScrolling: true,
+              }}
             />
           </div>
 
-          {/* Buttons */}
-          <div className="flex justify-end mt-4">
+          {/* Run Button */}
+          <div className="flex justify-end mt-6">
             <button
               onClick={handleRunCode}
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition disabled:opacity-50"
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-60 font-medium"
             >
               {loading ? "Running..." : "Run Code"}
             </button>
           </div>
 
-          {/* Output Section */}
-          <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-2 text-gray-700">Output:</h2>
-            {language === "html" || language === "css" || language === "javascript" ? (
-              <iframe
-                id="outputFrame"
-                title="output"
-                sandbox="allow-scripts allow-same-origin"
-                className="w-full h-[300px] border rounded-md bg-white"
-              ></iframe>
+          {/* Output */}
+          <div className="mt-10">
+            <h2 className="text-xl font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <span>Output</span>
+              <span className="text-gray-400 text-sm font-normal">
+                ({language.toUpperCase()})
+              </span>
+            </h2>
+
+            {["html", "css", "javascript"].includes(language) ? (
+              <div className="border border-gray-200 rounded-lg bg-gray-100 shadow-inner overflow-hidden">
+                <iframe
+                  id="outputFrame"
+                  title="Output Preview"
+                  sandbox="allow-scripts allow-same-origin"
+                  className="w-full h-[350px] bg-white rounded-lg"
+                ></iframe>
+              </div>
             ) : (
-              <pre className="bg-gray-900 text-green-400 p-4 rounded-md overflow-auto min-h-[150px]">
+              <pre className="bg-gray-900 text-green-400 rounded-lg p-4 sm:p-6 text-sm font-mono overflow-auto border border-gray-800 min-h-[200px] shadow-inner">
                 {output || "Your output will appear here..."}
               </pre>
             )}

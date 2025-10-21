@@ -285,7 +285,10 @@ export const getLeaderboard = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
 
-    const leaderboard = await User.find({}, "name imageUrl totalScore")
+    const leaderboard = await User.find(
+      { "publicMetadata.role": { $ne: "educator" } }, // exclude educators
+      "name imageUrl totalScore"
+    )
       .sort({ totalScore: -1 })
       .limit(limit);
 

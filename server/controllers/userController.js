@@ -87,7 +87,6 @@ export const purchaseCourse = async (req, res) => {
 }
 
 // Users Enrolled Courses With Lecture Links
-// Users Enrolled Courses With Lecture Links
 export const userEnrolledCourses = async (req, res) => {
   try {
     const userId = req.auth.userId;

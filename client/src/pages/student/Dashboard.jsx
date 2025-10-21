@@ -393,13 +393,13 @@ const generateConsecutiveStreak = async (progressList) => {
           <div className="mt-10 text-center flex flex-col sm:flex-row justify-center gap-4">
             <a
               href="/my-enrollments"
-              className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+              className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:-translate-x-1 duration-500 hover:shadow-[4px_4px_0_#000]"
             >
               View My Enrollments
             </a>
             <a
               href="/leaderboard"
-              className="inline-block px-6 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 transition"
+              className="inline-block px-6 py-2 bg-cyan-500 text-white rounded-lg text-sm font-medium hover:-translate-x-1 duration-500 hover:shadow-[4px_4px_0_#000]"
             >
               View Leaderboard
             </a>

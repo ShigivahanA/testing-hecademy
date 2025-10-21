@@ -281,6 +281,20 @@ const generateCertificateForCourse = async (course, user) => {
   }
 };
 
+const fetchLeaderboard = async () => {
+  try {
+    const token = await getToken();
+    const { data } = await axios.get(`${backendUrl}/api/user/leaderboard`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return data.leaderboard || [];
+  } catch (error) {
+    toast.error(error.message);
+    return [];
+  }
+};
+
+
 
     const value = {
         showLogin, setShowLogin,
@@ -292,7 +306,7 @@ const generateCertificateForCourse = async (course, user) => {
         calculateRating, calculateNoOfLectures,
         isEducator,setIsEducator, recommendations, 
         fetchRecommendations ,certificates, fetchCertificates, 
-        generateCertificateForCourse, loadingUser, updateUserCourseProgress
+        generateCertificateForCourse, loadingUser, updateUserCourseProgress, fetchLeaderboard
     }
 
 

@@ -18,6 +18,7 @@ import Loading from './components/student/Loading'
 import VerifyCertificate from './pages/student/VerifyCertificate'
 import CodeEditor from "./pages/student/CodeEditor";
 import StudentDashboard from './pages/student/Dashboard'
+import Leaderboard from "./pages/student/Leaderboard";
 
 const App = () => {
   const isEducatorRoute = useMatch('/educator/*')
@@ -64,6 +65,7 @@ const App = () => {
           </Route>
           <Route path="/verify/:id" element={<VerifyCertificate />} />
           <Route path="/code-editor" element={<CodeEditor />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
         </Routes>
       </div>
 

@@ -137,7 +137,7 @@ export const updateUserCourseProgress = async (req, res) => {
     if (!courseId || !lectureId) {
       return res.json({ success: false, message: "Missing required fields" });
     }
-
+    const baseScore = 10;
     let progressData = await CourseProgress.findOne({ userId, courseId });
 
     if (progressData) {
@@ -154,7 +154,9 @@ export const updateUserCourseProgress = async (req, res) => {
         lectureId,
         duration: duration || 0,
         completedAt: new Date(),
+        score: baseScore,
       });
+      progressData.totalScore += baseScore;
 
       // Check if all lectures are done
       // You can compare count later if course.totalLectures known
@@ -163,17 +165,21 @@ export const updateUserCourseProgress = async (req, res) => {
       progressData = await CourseProgress.create({
         userId,
         courseId,
+        totalScore: baseScore,
         lectureCompleted: [
           {
             lectureId,
             duration: duration || 0,
             completedAt: new Date(),
+            score: baseScore,
           },
         ],
       });
     }
 
-    res.json({ success: true, message: "Progress Updated", progressData });
+    await User.findByIdAndUpdate(userId, { $inc: { totalScore: baseScore } });
+
+    res.json({ success: true, message: `Progress updated +${baseScore} points`, progressData });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
@@ -273,3 +279,18 @@ export const updateUserPreferences = async (req, res) => {
     res.json({ success: false, message: error.message })
   }
 }
+
+// Get Leaderboard (Top Learners)
+export const getLeaderboard = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+
+    const leaderboard = await User.find({}, "name imageUrl totalScore")
+      .sort({ totalScore: -1 })
+      .limit(limit);
+
+    res.json({ success: true, leaderboard });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};

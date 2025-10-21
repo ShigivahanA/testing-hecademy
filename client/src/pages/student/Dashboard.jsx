@@ -389,14 +389,19 @@ const generateConsecutiveStreak = async (progressList) => {
               </div>
             </div>
           )}
-
-          {/* CTA */}
-          <div className="mt-10 text-center">
+                    {/* CTA */}
+          <div className="mt-10 text-center flex flex-col sm:flex-row justify-center gap-4">
             <a
               href="/my-enrollments"
               className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
             >
               View My Enrollments
+            </a>
+            <a
+              href="/leaderboard"
+              className="inline-block px-6 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 transition"
+            >
+              View Leaderboard
             </a>
           </div>
         </div>

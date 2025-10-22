@@ -281,19 +281,29 @@ export const updateUserPreferences = async (req, res) => {
 }
 
 // Get Leaderboard (Top Learners - Dynamic Recalculation)
+import { clerkClient } from "@clerk/express";
+import User from "../models/User.js";
+import { CourseProgress } from "../models/CourseProgress.js";
+
 export const getLeaderboard = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
 
-    // Step 1️⃣: Fetch all users (excluding educators)
-    const users = await User.find(
-      { "publicMetadata.role": { $ne: "educator" } },
-      "_id name imageUrl"
-    );
+    // Step 1️⃣: Fetch all MongoDB users
+    const users = await User.find({}, "_id name imageUrl");
 
-    // Step 2️⃣: For each user, calculate total score from CourseProgress
+    // Step 2️⃣: Filter out educators using Clerk data
+    const filteredUsers = [];
+    for (const user of users) {
+      const clerkUser = await clerkClient.users.getUser(user._id);
+      if (clerkUser?.publicMetadata?.role !== "educator") {
+        filteredUsers.push(user);
+      }
+    }
+
+    // Step 3️⃣: Calculate totalScore dynamically
     const leaderboard = await Promise.all(
-      users.map(async (user) => {
+      filteredUsers.map(async (user) => {
         const progresses = await CourseProgress.find({ userId: user._id });
         const totalScore = progresses.reduce(
           (sum, p) => sum + (p.totalScore || 0),
@@ -308,7 +318,6 @@ export const getLeaderboard = async (req, res) => {
       })
     );
 
-    // Step 3️⃣: Sort + limit top users
     leaderboard.sort((a, b) => b.totalScore - a.totalScore);
     const topUsers = leaderboard.slice(0, limit);
 

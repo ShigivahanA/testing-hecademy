@@ -1,20 +1,24 @@
+import mongoose from "mongoose";
 import { Discussion } from "../models/Discussion.js";
 import { clerkClient } from "@clerk/express";
 import { EDUCATOR_IDS } from "../configs/educators.js";
 import { v4 as uuidv4 } from "uuid";
 
-// ✅ 1. Get all discussions for a specific course or lecture
+/**
+ * ✅ 1. Get discussions for specific course or lecture
+ */
 export const getDiscussions = async (req, res) => {
   try {
     const { courseId, lectureId } = req.params;
 
-    const query = lectureId
-      ? { courseId, lectureId }
-      : { courseId };
+    const query = {
+      courseId: new mongoose.Types.ObjectId(courseId),
+    };
+    if (lectureId) query.lectureId = lectureId;
 
     const discussions = await Discussion.findOne(query)
-      .populate("courseId", "courseTitle")
-      .populate("lectureId", "lectureTitle");
+      .populate("courseId", "courseTitle courseContent")
+      .lean();
 
     res.json({
       success: true,
@@ -25,7 +29,9 @@ export const getDiscussions = async (req, res) => {
   }
 };
 
-// ✅ 2. Start a new discussion (student)
+/**
+ * ✅ 2. Start a new discussion (Student)
+ */
 export const startDiscussion = async (req, res) => {
   try {
     const { courseId, lectureId, message } = req.body;
@@ -42,8 +48,12 @@ export const startDiscussion = async (req, res) => {
     const imageUrl = user.imageUrl || "";
     const isEducator = EDUCATOR_IDS.includes(userId);
 
-    // 🔍 Find or create discussion doc (per lecture)
-    let discussion = await Discussion.findOne({ courseId, lectureId });
+    // 🔍 Find or create discussion doc per course + lecture
+    let discussion = await Discussion.findOne({
+      courseId: new mongoose.Types.ObjectId(courseId),
+      lectureId: lectureId || null,
+    });
+
     if (!discussion)
       discussion = new Discussion({ courseId, lectureId, threads: [] });
 
@@ -63,7 +73,9 @@ export const startDiscussion = async (req, res) => {
   }
 };
 
-// ✅ 3. Reply to a discussion
+/**
+ * ✅ 3. Reply to a discussion (Student / Educator)
+ */
 export const replyToThread = async (req, res) => {
   try {
     const { courseId, lectureId, questionId, message } = req.body;
@@ -80,7 +92,11 @@ export const replyToThread = async (req, res) => {
     const imageUrl = user.imageUrl || "";
     const isEducator = EDUCATOR_IDS.includes(userId);
 
-    const discussion = await Discussion.findOne({ courseId, lectureId });
+    const discussion = await Discussion.findOne({
+      courseId: new mongoose.Types.ObjectId(courseId),
+      lectureId: lectureId || null,
+    });
+
     if (!discussion)
       return res.json({ success: false, message: "No discussion found" });
 
@@ -97,12 +113,18 @@ export const replyToThread = async (req, res) => {
   }
 };
 
-// ✅ 4. Update thread status (resolved / open)
+/**
+ * ✅ 4. Update discussion status
+ */
 export const updateDiscussionStatus = async (req, res) => {
   try {
     const { courseId, lectureId, questionId, status } = req.body;
 
-    const discussion = await Discussion.findOne({ courseId, lectureId });
+    const discussion = await Discussion.findOne({
+      courseId: new mongoose.Types.ObjectId(courseId),
+      lectureId: lectureId || null,
+    });
+
     if (!discussion)
       return res.json({ success: false, message: "Discussion not found" });
 
@@ -123,15 +145,19 @@ export const updateDiscussionStatus = async (req, res) => {
   }
 };
 
-// ✅ 5. Educator Dashboard – Get all student questions (grouped by course + lecture)
+/**
+ * ✅ 5. Educator Dashboard – All lecture discussions (grouped)
+ */
 export const getAllCourseQuestions = async (req, res) => {
   try {
     const allDiscussions = await Discussion.find({})
-      .populate("courseId", "courseTitle")
-      .populate("lectureId", "lectureTitle")
+      .populate("courseId", "courseTitle courseContent")
       .lean();
 
-    res.json({ success: true, discussions: allDiscussions });
+    // Filter: show only lecture-level
+    const lectureDiscussions = allDiscussions.filter((d) => !!d.lectureId);
+
+    res.json({ success: true, discussions: lectureDiscussions });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }

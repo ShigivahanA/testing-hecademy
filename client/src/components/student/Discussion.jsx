@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
 import { AppContext } from "../../context/AppContext";
 import { toast } from "react-toastify";
@@ -14,16 +14,19 @@ const Discussion = ({ courseId, lectureId = null }) => {
   const [threads, setThreads] = useState([]);
   const [newQuestion, setNewQuestion] = useState("");
   const [replyInputs, setReplyInputs] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true); // ✅ show spinner only once
+  const [backgroundFetching, setBackgroundFetching] = useState(false); // ✅ silent background flag
 
   const isEducator = EDUCATOR_IDS.includes(userData?._id);
   const userId = userData?._id;
+  const intervalRef = useRef(null);
 
   // ✅ Fetch all threads (lecture-based or course-based)
-  const fetchThreads = async () => {
+  const fetchThreads = async (isBackground = false) => {
     try {
       const token = await getToken();
-      setLoading(true);
+      if (!isBackground) setInitialLoading(true);
+      else setBackgroundFetching(true);
 
       const endpoint = lectureId
         ? `${backendUrl}/api/discussion/${courseId}/${lectureId}`
@@ -40,17 +43,18 @@ const Discussion = ({ courseId, lectureId = null }) => {
         }
       }
     } catch (error) {
-      toast.error("Failed to fetch discussions");
+      if (!isBackground) toast.error("Failed to fetch discussions");
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
+      setBackgroundFetching(false);
     }
   };
 
-  // ⏱ Auto-refresh every 3s
+  // ⏱ Auto-refresh silently every 3s
   useEffect(() => {
-    fetchThreads();
-    const interval = setInterval(fetchThreads, 3000);
-    return () => clearInterval(interval);
+    fetchThreads(false);
+    intervalRef.current = setInterval(() => fetchThreads(true), 3000);
+    return () => clearInterval(intervalRef.current);
   }, [courseId, lectureId]);
 
   // ✅ Start new discussion
@@ -68,7 +72,7 @@ const Discussion = ({ courseId, lectureId = null }) => {
       if (data.success) {
         toast.success("New discussion started!");
         setNewQuestion("");
-        fetchThreads();
+        fetchThreads(true);
       } else toast.error(data.message);
     } catch (error) {
       toast.error(error.message);
@@ -90,7 +94,7 @@ const Discussion = ({ courseId, lectureId = null }) => {
 
       if (data.success) {
         setReplyInputs((prev) => ({ ...prev, [questionId]: "" }));
-        fetchThreads();
+        fetchThreads(true);
       } else toast.error(data.message);
     } catch (error) {
       toast.error(error.message);
@@ -107,7 +111,7 @@ const Discussion = ({ courseId, lectureId = null }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success(`Discussion marked as ${status}`);
-      fetchThreads();
+      fetchThreads(true);
     } catch (error) {
       toast.error(error.message);
     }
@@ -120,8 +124,8 @@ const Discussion = ({ courseId, lectureId = null }) => {
       timeStyle: "short",
     });
 
-  // ✅ Loading view
-  if (loading && threads.length === 0)
+  // ✅ Initial Loading View
+  if (initialLoading && threads.length === 0)
     return (
       <div className="flex justify-center items-center py-10 text-gray-500">
         <RefreshCw className="animate-spin mr-2" /> Loading discussions...
@@ -129,14 +133,21 @@ const Discussion = ({ courseId, lectureId = null }) => {
     );
 
   return (
-    <div className="sm:m-10 bg-gradient-to-b from-white to-gray-50 border border-gray-200 sm:rounded-2xl shadow-md p-5 sm:p-8 transition-all">
+    <div className="sm:m-10 bg-gradient-to-b from-white to-gray-50 border border-gray-200 sm:rounded-2xl shadow-md p-5 sm:p-8 transition-all relative">
+      {/* Background fetch spinner (top-right corner) */}
+      {backgroundFetching && (
+        <div className="absolute top-4 right-4 flex items-center gap-1 text-xs text-gray-400">
+          <RefreshCw size={12} className="animate-spin" /> updating…
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
           {lectureId ? "Lecture Discussion" : "Course Discussion"}
         </h2>
         <button
-          onClick={fetchThreads}
+          onClick={() => fetchThreads(true)}
           className="flex items-center gap-1 text-sm bg-gray-100 px-3 py-1.5 rounded-md hover:bg-gray-200 transition"
         >
           <RefreshCw size={14} className="text-cyan-600" /> Refresh
@@ -300,9 +311,11 @@ const Discussion = ({ courseId, lectureId = null }) => {
           })}
         </div>
       ) : (
-        <p className="text-gray-500 text-sm text-center py-8">
-          No discussions yet — start the conversation!
-        </p>
+        !initialLoading && (
+          <p className="text-gray-500 text-sm text-center py-8">
+            No discussions yet — start the conversation!
+          </p>
+        )
       )}
     </div>
   );

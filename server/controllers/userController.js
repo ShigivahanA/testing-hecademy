@@ -179,7 +179,6 @@ export const updateUserCourseProgress = async (req, res) => {
     }
 
     await User.findByIdAndUpdate(userId, { $inc: { totalScore: earnedScore } });
-    recalculateLeaderboardScores();
     res.json({ success: true, message: `Progress updated +${earnedScore} points`, progressData });
   } catch (error) {
     res.json({ success: false, message: error.message });

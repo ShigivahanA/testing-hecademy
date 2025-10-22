@@ -14,8 +14,8 @@ const replySchema = new mongoose.Schema(
 
 const threadSchema = new mongoose.Schema(
   {
-    questionId: { type: String, required: true }, // unique ID for thread
-    parentMessage: replySchema, // student's main question
+    questionId: { type: String, required: true }, // unique thread ID
+    parentMessage: replySchema, // main question
     replies: [replySchema],
     status: {
       type: String,
@@ -33,11 +33,13 @@ const discussionSchema = new mongoose.Schema(
       ref: "Course",
       required: true,
     },
+
+    // ✅ lectureId should be STRING since lectures are embedded in Course
     lectureId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Lecture", // 👈 new field for per-lecture discussions
-      required: false, // optional to keep old data valid
+      type: String, // 🔥 changed from ObjectId to String
+      required: false, // optional for course-wide discussions
     },
+
     threads: [threadSchema],
   },
   { timestamps: true }

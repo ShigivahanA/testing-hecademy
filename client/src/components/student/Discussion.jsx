@@ -32,8 +32,15 @@ const Discussion = ({ courseId }) => {
   };
 
   useEffect(() => {
+  fetchThreads(); // Initial load
+
+  // 🔁 Poll every 5 seconds for new updates
+  const interval = setInterval(() => {
     fetchThreads();
-  }, [courseId]);
+  }, 5000);
+
+  return () => clearInterval(interval); // Cleanup when unmounted
+}, [courseId]);
 
   // ✅ Start new discussion (student only)
   const startDiscussion = async () => {

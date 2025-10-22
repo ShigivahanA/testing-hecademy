@@ -29,9 +29,16 @@ const StudentQuestions = () => {
     }
   };
 
-  useEffect(() => {
+useEffect(() => {
+  fetchAllQuestions(); // Initial load
+
+  // 🔁 Poll every 5 seconds
+  const interval = setInterval(() => {
     fetchAllQuestions();
-  }, []);
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, []);
 
   // ✅ Handle input change for replies
   const handleReplyChange = (threadId, value) => {

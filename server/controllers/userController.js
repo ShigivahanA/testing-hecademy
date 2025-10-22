@@ -157,7 +157,7 @@ export const updateUserCourseProgress = async (req, res) => {
         completedAt: new Date(),
         score: earnedScore,
       });
-      progressData.totalScore += baseScore;
+      progressData.totalScore += earnedScore;
 
       // Check if all lectures are done
       // You can compare count later if course.totalLectures known

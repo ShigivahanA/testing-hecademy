@@ -179,11 +179,19 @@ const StudentQuestions = () => {
                               {/* Lecture Header */}
                               <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-2 text-gray-700 text-sm sm:text-base font-medium">
-                                  <PlayCircle
-                                    size={16}
-                                    className="text-blue-500"
-                                  />
-                                  Lecture Discussion
+                                  {(() => {
+  const lecture = group.courseId?.courseContent
+    ?.flatMap((ch) => ch.chapterContent)
+    ?.find((lec) => lec.lectureId === disc.lectureId);
+
+  return (
+    <>
+      <PlayCircle size={16} className="text-blue-500" />
+      {lecture ? `Lecture: ${lecture.lectureTitle}` : "Lecture Discussion"}
+    </>
+  );
+})()}
+
                                 </div>
                                 <span
                                   className={`text-[10px] sm:text-xs font-medium ${

@@ -60,9 +60,12 @@ const StudentDashboard = () => {
             : 0;
 
           // ✅ Add watch time info (durationMinutes & updatedAt)
-          const totalMinutesWatched =
-            data.progressData?.totalMinutesWatched || 0;
-
+          const totalMinutesWatched = data.progressData?.lectureCompleted
+  ? data.progressData.lectureCompleted.reduce(
+      (sum, lec) => sum + (lec.duration || 0),
+      0
+    )
+  : 0;
           return {
             courseId: course._id,
             courseTitle: course.courseTitle,
@@ -156,7 +159,7 @@ const generateConsecutiveStreak = async (progressList) => {
       const minutes = dailyMap[key] || 0;
       const hours = minutes / 60;
 
-      last7Days.push({ day: label, Hours: Number(hours.toFixed(1)) });
+      last7Days.push({ day: label,date: key, Hours: Number(hours.toFixed(1)) });
     }
 
     // Step 4️⃣: Update chart data
@@ -198,6 +201,123 @@ const generateConsecutiveStreak = async (progressList) => {
       fetchRecommendations();
     }
   }, [userData, enrolledCourses]);
+
+    // Monthly Calendar Component (Fixed Layout)
+    const LearningCalendar = ({ learnedDates = [], streakCount }) => {
+      const [currentMonth, setCurrentMonth] = useState(new Date());
+
+      // Convert learnedDates into a Set of date strings (YYYY-MM-DD)
+      const learnedSet = new Set();
+      learnedDates.forEach((d) => {
+        if (d.Hours > 0 && d.date) learnedSet.add(d.date);
+      });
+
+      // Month info
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth();
+      const firstDay = new Date(year, month, 1).getDay();
+      const totalDays = new Date(year, month + 1, 0).getDate();
+
+      // Generate grid array
+      const daysArray = [];
+      for (let i = 0; i < firstDay; i++) daysArray.push(null);
+      for (let d = 1; d <= totalDays; d++) {
+        const dateKey = new Date(year, month, d).toISOString().split("T")[0];
+        daysArray.push({ day: d, learned: learnedSet.has(dateKey) });
+      }
+
+      // Month name
+      const monthName = currentMonth.toLocaleString("default", { month: "long" });
+      const changeMonth = (dir) => {
+        setCurrentMonth(new Date(year, month + dir, 1));
+      };
+
+      return (
+        <div className="flex flex-col items-center w-full">
+          {/* Header */}
+          <div className="flex justify-between items-center w-full mb-3">
+            <button
+              onClick={() => changeMonth(-1)}
+              className="text-gray-500 hover:text-cyan-500 transition transform rotate-180"
+            >
+              ➜
+            </button>
+            <div className="text-lg font-semibold text-gray-800">
+              {monthName} {year}
+            </div>
+            <button
+              onClick={() => changeMonth(1)}
+              className="text-gray-500 hover:text-cyan-500 transition"
+            >
+              ➜
+            </button>
+          </div>
+
+          {/* Streak */}
+          <p className="text-gray-700 font-medium mb-4">
+            Current Streak:{" "}
+            <span className="text-cyan-500 font-semibold">
+              {streakCount} {streakCount === 1 ? "day" : "days"}
+            </span>
+          </p>
+
+          {/* Calendar Grid */}
+          <div className="w-full max-w-[350px] aspect-square flex flex-col items-center justify-center">
+            {/* Weekday headers */}
+            <div className="grid grid-cols-7 gap-[4px] w-full mb-1 text-[10px] sm:text-xs text-gray-500 text-center">
+              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+                <div key={day} className="font-medium">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Days grid */}
+            <div className="grid grid-cols-7 gap-[4px] w-full">
+              {daysArray.map((dayObj, idx) =>
+                dayObj ? (
+                  <div
+                    key={idx}
+                    className={`flex items-center justify-center text-xs sm:text-sm font-medium rounded-md transition-all ${
+                      dayObj.learned
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                    style={{
+                      aspectRatio: "1 / 1", // Makes cells perfect squares
+                      minHeight: "32px",
+                    }}
+                  >
+                    {dayObj.day}
+                  </div>
+                ) : (
+                  <div
+                    key={idx}
+                    style={{
+                      aspectRatio: "1 / 1",
+                      minHeight: "32px",
+                    }}
+                  />
+                )
+              )}
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4 mt-4 text-xs text-gray-600">
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
+              <span>Learned</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-3 h-3 bg-gray-100 border rounded-sm"></div>
+              <span>Not Learned</span>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
 
   if (loading) return <Loading />;
 
@@ -294,89 +414,98 @@ const generateConsecutiveStreak = async (progressList) => {
             />
           </div>
 
-          {/* Charts */}
+          {/* Charts Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Completion Pie */}
-            <div className="bg-gray-50 rounded-xl p-6 shadow-inner border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">
-                Completion Overview
+            {/* ⏱️ Learning Time Distribution */}
+            <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-inner flex flex-col h-full min-h-[430px]">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-800 mb-6 text-center">
+                Learning Time Distribution
               </h2>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    label
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+
+              <div className="flex-grow flex items-center justify-center">
+                {progressData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={progressData}
+                      margin={{ top: 10, right: 20, left: 0, bottom: 10 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                      <XAxis
+                        dataKey="courseTitle"
+                        tick={{
+                          fontSize: 8,
+                          fill: "#4B5563",
+                        }}
+                        interval={0}
+                        angle={-15}
+                        textAnchor="end"
+                        tickLine={false}
+                        height={60}
+                      />
+                      <YAxis
+                        tick={{
+                          fontSize: 9,
+                          fill: "#4B5563",
+                        }}
+                        label={{
+                          value: "Minutes Watched",
+                          angle: -90,
+                          position: "insideLeft",
+                          style: {
+                            textAnchor: "middle",
+                            fill: "#4B5563",
+                            fontSize: 10,
+                          },
+                        }}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "transparent" }}
+                        formatter={(v) => `${Math.round(v)} minutes`}
+                        contentStyle={{
+                          backgroundColor: "#fff",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "8px",
+                          color: "#2563EB",
+                          fontSize: "0.75rem",
+                        }}
+                      />
+                      <Bar
+                        dataKey="minutesWatched"
+                        fill="#06b6d4"
+                        radius={[6, 6, 0, 0]}
+                        barSize={30}
+                        isAnimationActive={false}
+                        activeBar={false}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-gray-500 text-xs sm:text-sm md:text-base text-center mt-8">
+                    No study time data yet. Start watching lectures to see progress!
+                  </p>
+                )}
+              </div>
             </div>
-            {/* Daily Streak */}
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">
-                Daily Learning Hours
+
+            {/* 🗓️ Learning Calendar */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200 flex flex-col h-full min-h-[430px]">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-800 mb-3 text-center">
+                Monthly Learning Calendar
               </h2>
-
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart
-                  data={dailyStreakData}
-                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                  style={{ backgroundColor: "transparent" }}
-                >
-                  <CartesianGrid stroke="#f0f0f0" vertical={false} />
-
-                  <XAxis
-                    dataKey="day"
-                    tick={{ fontSize: 12, fill: "#4B5563" }}
-                    axisLine={{ stroke: "#E5E7EB" }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 12, fill: "#4B5563" }}
-                    label={{
-                      value: "Hours",
-                      angle: -90,
-                      position: "insideLeft",
-                      style: { textAnchor: "middle", fill: "#4B5563", fontSize: 12 },
-                    }}
-                    domain={[0, "auto"]}
-                    allowDecimals={false}
-                    axisLine={{ stroke: "#E5E7EB" }}
-                    tickLine={false}
-                  />
-
-                  <Tooltip
-                    formatter={(value) => `${value} hrs`}
-                    contentStyle={{
-                      backgroundColor: "#fff",
-                      border: "1px solid #E5E7EB",
-                      borderRadius: "8px",
-                      color: "#2563EB",
-                    }}
-                    cursor={{ fill: "transparent" }} // ✅ This line removes the gray hover bar
-                  />
-
-                  <Bar
-                    dataKey="Hours"
-                    fill="#2563EB"
-                    radius={[8, 8, 0, 0]}
-                    barSize={40}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-              <p className="text-sm text-gray-500 text-center mt-3">
-                Keep your streak alive — missing a day resets your progress!
+              <p className="text-xs sm:text-sm text-gray-500 mb-4 text-center">
+                Missing a day resets your streak!
               </p>
+
+              {/* Stretch calendar evenly */}
+              <div className="flex-grow flex items-center justify-center">
+                <LearningCalendar
+                  learnedDates={dailyStreakData}
+                  streakCount={streakCount}
+                />
+              </div>
             </div>
           </div>
+
           {/* Recommendations */}
           {(recommendations.length > 0 ? recommendations : recommendedCourses)
             .slice(0, 3)

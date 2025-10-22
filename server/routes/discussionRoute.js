@@ -1,10 +1,21 @@
 import express from "express";
-import { getDiscussions, addMessage, getAllCourseQuestions } from "../controllers/discussionController.js";
+import {
+  getDiscussions,
+  startDiscussion,
+  replyToThread,
+  updateDiscussionStatus,
+  getAllCourseQuestions,
+} from "../controllers/discussionController.js";
 
 const discussionRouter = express.Router();
 
-discussionRouter.get("/:courseId", getDiscussions);
-discussionRouter.post("/add", addMessage);
+// Student + Educator shared routes
+discussionRouter.get("/:courseId",getDiscussions);
+discussionRouter.post("/start", startDiscussion);
+discussionRouter.post("/reply", replyToThread);
+discussionRouter.patch("/status", updateDiscussionStatus);
+
+// Educator dashboard
 discussionRouter.get("/educator/all", getAllCourseQuestions);
 
 export default discussionRouter;

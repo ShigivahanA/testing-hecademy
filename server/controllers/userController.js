@@ -280,10 +280,6 @@ export const updateUserPreferences = async (req, res) => {
   }
 }
 
-// Get Leaderboard (Top Learners - Dynamic Recalculation)
-import { clerkClient } from "@clerk/express";
-import User from "../models/User.js";
-import { CourseProgress } from "../models/CourseProgress.js";
 
 export const getLeaderboard = async (req, res) => {
   try {

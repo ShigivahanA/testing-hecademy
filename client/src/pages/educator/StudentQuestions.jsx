@@ -173,7 +173,7 @@ const StudentQuestions = () => {
                               className={`rounded-lg border shadow-sm p-3 sm:p-4 transition-all ${
                                 resolved
                                   ? "bg-green-50 border-green-200"
-                                  : "bg-white border-gray-200"
+                                  : "bg-red-50 border-red-200"
                               }`}
                             >
                               {/* Lecture Header */}
@@ -186,8 +186,7 @@ const StudentQuestions = () => {
 
   return (
     <>
-      <PlayCircle size={16} className="text-blue-500" />
-      {lecture ? `Lecture: ${lecture.lectureTitle}` : "Lecture Discussion"}
+      {lecture ? `${lecture.lectureTitle}` : "Lecture Discussion"}
     </>
   );
 })()}

@@ -134,12 +134,12 @@ const Discussion = ({ courseId, lectureId = null }) => {
 
   return (
     <div className="sm:m-10 bg-gradient-to-b from-white to-gray-50 border border-gray-200 sm:rounded-2xl shadow-md p-5 sm:p-8 transition-all relative">
-      {/* Background fetch spinner (top-right corner) */}
+      {/* Background fetch spinner (top-right corner)
       {backgroundFetching && (
         <div className="absolute top-4 right-4 flex items-center gap-1 text-xs text-gray-400">
           <RefreshCw size={12} className="animate-spin" /> updating…
         </div>
-      )}
+      )} */}
 
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
@@ -190,7 +190,7 @@ const Discussion = ({ courseId, lectureId = null }) => {
                 className={`rounded-xl border ${
                   resolved
                     ? "bg-green-50 border-green-200"
-                    : "bg-white border-gray-200"
+                    : "bg-red-50 border-red-200"
                 } shadow-sm hover:shadow-md transition-all duration-300`}
               >
                 {/* 🧑‍🎓 Question Header */}

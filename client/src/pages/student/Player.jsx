@@ -185,7 +185,7 @@ const Player = () => {
         }`}
       >
         {/* Sidebar Header */}
-        <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+        <div className="flex justify-between items-center p-4 border-b bg-gray-50 rounded-tr-lg">
           <h2 className="text-lg font-semibold text-gray-800">
             {courseData.courseTitle}
           </h2>

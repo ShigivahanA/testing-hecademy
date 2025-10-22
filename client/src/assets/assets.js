@@ -36,10 +36,12 @@ import blue_tick_icon from './blue_tick_icon.svg'
 import lesson_icon from './lesson_icon.svg'
 import bookflip from './bookflip.gif'
 import certificateTemplate from './certificateTemplate.png'
+import message from './message.png'
 
 
 export const assets = {
     logo,
+    message,
     search_icon,
     sketch,
     microsoft_logo,

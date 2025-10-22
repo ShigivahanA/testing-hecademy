@@ -136,7 +136,9 @@ export const updateUserCourseProgress = async (req, res) => {
     if (!courseId || !lectureId) {
       return res.json({ success: false, message: "Missing required fields" });
     }
-    const baseScore = 10;
+    const pointsPerMinute = 2;
+    const earnedScore = Math.round((duration || 0) * pointsPerMinute);    
+    
     let progressData = await CourseProgress.findOne({ userId, courseId });
 
     if (progressData) {
@@ -153,7 +155,7 @@ export const updateUserCourseProgress = async (req, res) => {
         lectureId,
         duration: duration || 0,
         completedAt: new Date(),
-        score: baseScore,
+        score: earnedScore,
       });
       progressData.totalScore += baseScore;
 
@@ -164,7 +166,7 @@ export const updateUserCourseProgress = async (req, res) => {
       progressData = await CourseProgress.create({
         userId,
         courseId,
-        totalScore: baseScore,
+        totalScore: earnedScore,
         lectureCompleted: [
           {
             lectureId,
@@ -176,9 +178,9 @@ export const updateUserCourseProgress = async (req, res) => {
       });
     }
 
-    await User.findByIdAndUpdate(userId, { $inc: { totalScore: baseScore } });
+    await User.findByIdAndUpdate(userId, { $inc: { totalScore: earnedScore } });
 
-    res.json({ success: true, message: `Progress updated +${baseScore} points`, progressData });
+    res.json({ success: true, message: `Progress updated +${earnedScore} points`, progressData });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
@@ -279,19 +281,39 @@ export const updateUserPreferences = async (req, res) => {
   }
 }
 
-// Get Leaderboard (Top Learners)
+// Get Leaderboard (Top Learners - Dynamic Recalculation)
 export const getLeaderboard = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
 
-    const leaderboard = await User.find(
-      { "publicMetadata.role": { $ne: "educator" } }, // exclude educators
-      "name imageUrl totalScore"
-    )
-      .sort({ totalScore: -1 })
-      .limit(limit);
+    // Step 1️⃣: Fetch all users (excluding educators)
+    const users = await User.find(
+      { "publicMetadata.role": { $ne: "educator" } },
+      "_id name imageUrl"
+    );
 
-    res.json({ success: true, leaderboard });
+    // Step 2️⃣: For each user, calculate total score from CourseProgress
+    const leaderboard = await Promise.all(
+      users.map(async (user) => {
+        const progresses = await CourseProgress.find({ userId: user._id });
+        const totalScore = progresses.reduce(
+          (sum, p) => sum + (p.totalScore || 0),
+          0
+        );
+        return {
+          userId: user._id,
+          name: user.name,
+          imageUrl: user.imageUrl,
+          totalScore,
+        };
+      })
+    );
+
+    // Step 3️⃣: Sort + limit top users
+    leaderboard.sort((a, b) => b.totalScore - a.totalScore);
+    const topUsers = leaderboard.slice(0, limit);
+
+    res.json({ success: true, leaderboard: topUsers });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }

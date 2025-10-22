@@ -113,7 +113,6 @@ const StudentDashboard = () => {
   };
 
   // ✅ Generate Daily Streak (7 days visualization)
-  // ✅ Generate streak and actual daily learning hours from lectureCompleted[]
 const generateConsecutiveStreak = async (progressList) => {
   try {
     const token = await getToken();
@@ -139,7 +138,7 @@ const generateConsecutiveStreak = async (progressList) => {
 
       progress.lectureCompleted.forEach((lec) => {
         if (!lec.completedAt || lec.duration == null) return;
-        const day = new Date(lec.completedAt).toISOString().split("T")[0];
+        const day = new Date(lec.completedAt).toLocaleDateString("en-CA");
         if (!dailyMap[day]) dailyMap[day] = 0;
         dailyMap[day] += lec.duration; // duration is in minutes
       });
@@ -163,12 +162,21 @@ const generateConsecutiveStreak = async (progressList) => {
     // Step 4️⃣: Update chart data
     setDailyStreakData(last7Days);
 
-    // Step 5️⃣: Calculate streak (continuous nonzero days)
+    // Step 5️⃣: Calculate streak (continuous nonzero days, ignoring today if not studied yet)
     let streak = 0;
+    let foundToday = false;
+
     for (let i = last7Days.length - 1; i >= 0; i--) {
-      if (last7Days[i].Hours > 0) streak++;
+      const day = last7Days[i];
+      if (i === last7Days.length - 1 && day.Hours === 0) {
+        // today has 0 hours → skip and continue to yesterday
+        foundToday = true;
+        continue;
+      }
+      if (day.Hours > 0) streak++;
       else break;
     }
+
     setStreakCount(streak);
   } catch (err) {
     console.error("❌ generateConsecutiveStreak error:", err);

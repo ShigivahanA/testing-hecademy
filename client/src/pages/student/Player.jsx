@@ -10,6 +10,7 @@ import Rating from '../../components/student/Rating';
 import Footer from '../../components/student/Footer';
 import Loading from '../../components/student/Loading';
 import jsPDF from "jspdf"
+import Discussion from '../../components/student/Discussion';
 
 const Player = ({ }) => {
 
@@ -338,6 +339,7 @@ progressData.lectureCompleted?.some(
           )}
         </div>
       </div>
+      <Discussion courseId={courseId} />
 
       <Footer />
     </>

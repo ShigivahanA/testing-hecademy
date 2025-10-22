@@ -22,10 +22,10 @@ const Footer = () => {
     <a href="#">
       <img src={assets.facebook_icon} alt="facebook_icon" />
     </a>
-    <a href="#">
+    <a href="https://x.com/shigivahan_a?s=21" target="_blank" rel="noopener noreferrer">
       <img src={assets.twitter_icon} alt="twitter_icon" />
     </a>
-    <a href="#">
+    <a href="https://www.instagram.com/hijkaay/" target="_blank" rel="noopener noreferrer">
       <img src={assets.instagram_icon} alt="instagram_icon" />
     </a>
   </div>

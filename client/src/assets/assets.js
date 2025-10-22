@@ -36,7 +36,7 @@ import blue_tick_icon from './blue_tick_icon.svg'
 import lesson_icon from './lesson_icon.svg'
 import bookflip from './bookflip.gif'
 import certificateTemplate from './certificateTemplate.png'
-import message from './message.png'
+import message from './message.svg'
 
 
 export const assets = {

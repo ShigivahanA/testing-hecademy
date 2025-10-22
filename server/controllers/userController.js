@@ -280,44 +280,18 @@ export const updateUserPreferences = async (req, res) => {
   }
 }
 
-
+// Get Leaderboard (Top Learners - Dynamic Recalculation)
 export const getLeaderboard = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
 
-    // Step 1️⃣: Fetch all MongoDB users
-    const users = await User.find({}, "_id name imageUrl");
+    // Just fetch all users from MongoDB
+    const users = await User.find({}, "_id name imageUrl totalScore");
 
-    // Step 2️⃣: Filter out educators using Clerk data
-    const filteredUsers = [];
-    for (const user of users) {
-      const clerkUser = await clerkClient.users.getUser(user._id);
-      if (clerkUser?.publicMetadata?.role !== "educator") {
-        filteredUsers.push(user);
-      }
-    }
+    // Sort & limit
+    const leaderboard = users.sort((a, b) => b.totalScore - a.totalScore).slice(0, limit);
 
-    // Step 3️⃣: Calculate totalScore dynamically
-    const leaderboard = await Promise.all(
-      filteredUsers.map(async (user) => {
-        const progresses = await CourseProgress.find({ userId: user._id });
-        const totalScore = progresses.reduce(
-          (sum, p) => sum + (p.totalScore || 0),
-          0
-        );
-        return {
-          userId: user._id,
-          name: user.name,
-          imageUrl: user.imageUrl,
-          totalScore,
-        };
-      })
-    );
-
-    leaderboard.sort((a, b) => b.totalScore - a.totalScore);
-    const topUsers = leaderboard.slice(0, limit);
-
-    res.json({ success: true, leaderboard: topUsers });
+    res.json({ success: true, leaderboard });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }

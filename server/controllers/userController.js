@@ -172,7 +172,7 @@ export const updateUserCourseProgress = async (req, res) => {
             lectureId,
             duration: duration || 0,
             completedAt: new Date(),
-            score: baseScore,
+            score: earnedScore,
           },
         ],
       });

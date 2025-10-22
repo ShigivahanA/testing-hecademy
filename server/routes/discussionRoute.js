@@ -9,13 +9,14 @@ import {
 
 const discussionRouter = express.Router();
 
-// Student + Educator shared routes
-discussionRouter.get("/:courseId",getDiscussions);
-discussionRouter.post("/start", startDiscussion);
-discussionRouter.post("/reply", replyToThread);
-discussionRouter.patch("/status", updateDiscussionStatus);
+discussionRouter.get("/:courseId", getDiscussions);                 // course-level
+discussionRouter.get("/:courseId/:lectureId", getDiscussions);      // lecture-level
 
-// Educator dashboard
+discussionRouter.post("/start", startDiscussion);                   // start discussion
+discussionRouter.post("/reply", replyToThread);                     // reply to thread
+discussionRouter.patch("/status", updateDiscussionStatus);          // update status
+
+// 👩‍🏫 Educator dashboard route
 discussionRouter.get("/educator/all", getAllCourseQuestions);
 
 export default discussionRouter;

@@ -16,7 +16,7 @@ const threadSchema = new mongoose.Schema(
   {
     questionId: { type: String, required: true }, // unique ID for thread
     parentMessage: replySchema, // student's main question
-    replies: [replySchema], // educator/student replies
+    replies: [replySchema],
     status: {
       type: String,
       enum: ["open", "resolved"],
@@ -32,6 +32,11 @@ const discussionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
       required: true,
+    },
+    lectureId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Lecture", // 👈 new field for per-lecture discussions
+      required: false, // optional to keep old data valid
     },
     threads: [threadSchema],
   },

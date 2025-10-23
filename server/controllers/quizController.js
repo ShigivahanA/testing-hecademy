@@ -1,0 +1,84 @@
+// controllers/quizController.js
+import { Quiz } from "../models/Quiz.js";
+import Course from "../models/Course.js";
+import User from "../models/User.js";
+
+export const createQuiz = async (req, res) => {
+  try {
+    const educatorId = req.auth.userId;
+    const { courseId, chapterId, title, questions, passPercentage } = req.body;
+
+    const course = await Course.findById(courseId);
+    if (!course || course.educator !== educatorId) {
+      return res.json({ success: false, message: "Unauthorized educator or invalid course" });
+    }
+
+    const newQuiz = new Quiz({
+      courseId,
+      chapterId,
+      title,
+      questions,
+      passPercentage,
+    });
+
+    await newQuiz.save();
+    res.json({ success: true, message: "Quiz created successfully", quiz: newQuiz });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
+export const getCourseQuizzes = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const quizzes = await Quiz.find({ courseId });
+    res.json({ success: true, quizzes });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
+export const deleteQuiz = async (req, res) => {
+  try {
+    const { quizId } = req.params;
+    await Quiz.findByIdAndDelete(quizId);
+    res.json({ success: true, message: "Quiz deleted successfully" });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// 🧑‍🎓 Submit Quiz (Student)
+export const submitQuiz = async (req, res) => {
+  try {
+    const userId = req.auth.userId;
+    const { quizId, answers } = req.body;
+
+    const quiz = await Quiz.findById(quizId);
+    if (!quiz) return res.json({ success: false, message: "Quiz not found" });
+
+    const totalQuestions = quiz.questions.length;
+    const correctAnswers = quiz.questions.filter((q) => {
+      const selected = answers.find((a) => a.questionId === q._id.toString());
+      const correctOption = q.options.find((o) => o.isCorrect);
+      return selected?.selectedOption === correctOption?.text;
+    }).length;
+
+    const score = Math.round((correctAnswers / totalQuestions) * 100);
+    const passed = score >= quiz.passPercentage;
+
+    await User.findByIdAndUpdate(userId, {
+      $push: {
+        activityLog: {
+          courseId: quiz.courseId,
+          action: "completed_quiz",
+          details: { chapterId: quiz.chapterId, score, passed },
+        },
+      },
+    });
+
+    res.json({ success: true, score, passed });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};

@@ -11,6 +11,7 @@ import Footer from "../../components/student/Footer";
 import Loading from "../../components/student/Loading";
 import jsPDF from "jspdf";
 import Discussion from "../../components/student/Discussion";
+import QuizModal from "../../components/student/QuizModal";
 import { Menu, X, CheckCircle } from "lucide-react";
 
 const Player = () => {
@@ -34,9 +35,9 @@ const Player = () => {
   const [playerData, setPlayerData] = useState(null);
   const [initialRating, setInitialRating] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showQuiz, setShowQuiz] = useState(null);
   const params = new URLSearchParams(location.search);
   const initialLecture = params.get("lecture");
-
 
   // ✅ Get course data
   const getCourseData = () => {
@@ -258,7 +259,7 @@ const Player = () => {
               </div>
               <div
                 className={`transition-all overflow-hidden ${
-                  openSections[index] ? "max-h-[500px]" : "max-h-0"
+                  openSections[index] ? "max-h-[600px]" : "max-h-0"
                 }`}
               >
                 <ul className="pl-4 pr-3 py-2 text-sm space-y-1 border-t border-gray-100">
@@ -289,6 +290,14 @@ const Player = () => {
                     </li>
                   ))}
                 </ul>
+
+                {/* Chapter Quiz */}
+                <button
+                  onClick={() => setShowQuiz(chapter.chapterId)}
+                  className="m-3 w-[90%] bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-2 rounded-md transition"
+                >
+                  Take Chapter Quiz
+                </button>
               </div>
             </div>
           ))}
@@ -390,8 +399,19 @@ const Player = () => {
               </div>
             )}
           </div>
+
+          <Footer />
         </div>
       </div>
+
+      {/* Quiz Modal */}
+      {showQuiz && (
+        <QuizModal
+          courseId={courseId}
+          chapterId={showQuiz}
+          onClose={() => setShowQuiz(null)}
+        />
+      )}
     </div>
   );
 };

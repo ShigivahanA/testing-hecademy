@@ -15,9 +15,7 @@ const QuizModal = ({ courseId, chapterId, onClose }) => {
     const fetchQuiz = async () => {
       try {
         const token = await getToken();
-        const { data } = await axios.get(`${backendUrl}/api/quiz/${courseId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const { data } = await axios.get(`${backendUrl}/api/quiz/student/${courseId}`);
 
         const found = data.quizzes.find((q) => q.chapterId === chapterId);
         setQuiz(found || null);

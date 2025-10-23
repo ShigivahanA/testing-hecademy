@@ -17,5 +17,6 @@ quizRouter.delete("/:quizId", protectEducator, deleteQuiz);
 
 // Student
 quizRouter.post("/submit",submitQuiz);
+quizRouter.get("/student/:courseId", getCourseQuizzes);
 
 export default quizRouter;

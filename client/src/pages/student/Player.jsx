@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useRef } from "react";
 import { AppContext } from "../../context/AppContext";
 import YouTube from "react-youtube";
 import { assets } from "../../assets/assets";
@@ -11,7 +11,7 @@ import Footer from "../../components/student/Footer";
 import Loading from "../../components/student/Loading";
 import jsPDF from "jspdf";
 import Discussion from "../../components/student/Discussion";
-import QuizModal from "../../components/student/QuizModal";
+import QuizPanel from "../../components/student/QuizPanel";
 import { Menu, X, CheckCircle } from "lucide-react";
 
 const Player = () => {
@@ -38,6 +38,8 @@ const Player = () => {
   const [showQuiz, setShowQuiz] = useState(null);
   const params = new URLSearchParams(location.search);
   const initialLecture = params.get("lecture");
+  const videoRef = useRef(null);
+
 
   // ✅ Get course data
   const getCourseData = () => {
@@ -190,7 +192,10 @@ const Player = () => {
       >
         {/* Sidebar Header */}
         <div className="flex justify-between items-center p-4 border-b bg-gray-50 rounded-tr-lg">
-          <h2 className="text-lg font-semibold text-gray-800">
+          <h2
+            className="text-lg font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition"
+            onClick={() => navigate(`/course/${courseId}`)} // ✅ Navigation fix
+          >
             {courseData.courseTitle}
           </h2>
           <button
@@ -263,41 +268,106 @@ const Player = () => {
                 }`}
               >
                 <ul className="pl-4 pr-3 py-2 text-sm space-y-1 border-t border-gray-100">
-                  {chapter.chapterContent.map((lecture, i) => (
-                    <li
-                      key={i}
-                      onClick={() => {
-                        setPlayerData({
-                          ...lecture,
-                          chapter: index + 1,
-                          lecture: i + 1,
-                        });
-                        if (window.innerWidth < 1024) toggleSidebar();
-                      }}
-                      className={`flex justify-between items-center py-1 px-2 rounded-md cursor-pointer ${
-                        playerData?.lectureId === lecture.lectureId
-                          ? "bg-blue-50 text-blue-700 font-semibold"
-                          : "hover:bg-gray-100"
-                      }`}
-                    >
-                      <span>{lecture.lectureTitle}</span>
-                      <span className="text-xs text-gray-500">
-                        {humanizeDuration(
-                          lecture.lectureDuration * 60 * 1000,
-                          { units: ["m"], round: true }
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+  {chapter.chapterContent.map((lecture, i) => {
+    const isSelected = playerData?.lectureId === lecture.lectureId;
+    const isCompleted = progressData?.lectureCompleted?.some(
+      (lec) => lec.lectureId === lecture.lectureId
+    );
+
+    return (
+      <li
+        key={i}
+        onClick={() => {
+          setShowQuiz(null);
+          setPlayerData({
+            ...lecture,
+            chapter: index + 1,
+            lecture: i + 1,
+          });
+          setTimeout(() => {
+    videoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 100);
+          if (window.innerWidth < 1024) toggleSidebar();
+        }}
+        className={`flex justify-between items-center py-2 px-3 rounded-md cursor-pointer transition-all duration-200 ${
+          isSelected
+            ? "bg-blue-50 text-blue-700 font-semibold"
+            : isCompleted
+            ? "bg-green-50 text-green-700 font-medium"
+            : "hover:bg-gray-100 text-gray-700"
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 w-full truncate">
+          <span
+            className={`truncate ${
+              isCompleted ? "text-green-700" : isSelected ? "text-blue-700" : ""
+            }`}
+            title={lecture.lectureTitle}
+          >
+            {lecture.lectureTitle}
+          </span>
+          <span className="text-xs text-gray-500 sm:ml-auto">
+            {humanizeDuration(lecture.lectureDuration * 60 * 1000, {
+              units: ["m"],
+              round: true,
+            })}
+          </span>
+        </div>
+      </li>
+    );
+  })}
+</ul>
+
 
                 {/* Chapter Quiz */}
-                <button
-                  onClick={() => setShowQuiz(chapter.chapterId)}
-                  className="m-3 w-[90%] bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-3 py-2 rounded-md transition"
-                >
-                  Take Chapter Quiz
-                </button>
+                {/* Chapter Quiz */}
+{(() => {
+  // Check if this quiz was passed before
+const hasPassedQuiz =
+  userData?.activityLog?.some((log) => {
+    const logCourseId =
+      typeof log.courseId === "object"
+        ? log.courseId?._id || log.courseId?.$oid
+        : log.courseId;
+
+    return (
+      log.action === "completed_quiz" &&
+      logCourseId === courseId &&
+      log.details?.chapterId === chapter.chapterId &&
+      log.details?.passed === true
+    );
+  }) ?? false;
+
+
+  const isInProgress = showQuiz === chapter.chapterId;
+
+  return (
+    <button
+      onClick={() => {
+        setPlayerData(null);
+        setShowQuiz(chapter.chapterId);
+        setTimeout(() => {
+    videoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 100);
+        if (window.innerWidth < 1024) toggleSidebar();
+      }}
+      className={`m-3 w-[90%] text-xs px-3 py-2 rounded-md transition font-medium ${
+        isInProgress
+          ? "bg-green-600 text-white"
+          : hasPassedQuiz
+          ? "bg-green-500 hover:bg-green-600 text-white"
+          : "bg-yellow-500 hover:bg-yellow-600 text-white"
+      }`}
+    >
+      {isInProgress
+        ? "Quiz in Progress"
+        : hasPassedQuiz
+        ? "Quiz Completed"
+        : "Take Chapter Quiz"}
+    </button>
+  );
+})()}
+
               </div>
             </div>
           ))}
@@ -319,9 +389,21 @@ const Player = () => {
 
         {/* Main Content */}
         <div className="p-4 sm:p-6 lg:p-10 space-y-8">
-          {/* Video */}
-          {playerData ? (
-            <div>
+          {/* Video or Quiz Area */}
+          {showQuiz ? (
+           <QuizPanel
+  courseId={courseId}
+  chapterId={showQuiz}
+  onClose={() => setShowQuiz(null)}
+  onPass={(chapterId) => {
+    toast.success("Quiz Passed!");
+    // ✅ Re-fetch user data so button color updates
+    fetchUserEnrolledCourses();
+  }}
+/>
+
+          ) : playerData ? (
+            <div ref={videoRef}>
               <YouTube
                 iframeClassName="w-full aspect-video rounded-lg shadow"
                 videoId={playerData.lectureUrl.split("/").pop()}
@@ -335,7 +417,7 @@ const Player = () => {
                   onClick={() =>
                     markLectureAsCompleted(playerData.lectureId)
                   }
-                  className="text-blue-600 text-sm sm:text-base"
+                  className="text-blue-600 mb-10 text-sm sm:text-base"
                 >
                   {progressData?.lectureCompleted?.some(
                     (lec) => lec.lectureId === playerData.lectureId
@@ -344,20 +426,18 @@ const Player = () => {
                     : "Mark Complete"}
                 </button>
               </div>
+
+              {/* Discussion */}
+              <Discussion
+                courseId={courseId}
+                lectureId={playerData.lectureId}
+              />
             </div>
           ) : (
             <img
               src={courseData.courseThumbnail}
               alt="Course Thumbnail"
               className="rounded-lg shadow"
-            />
-          )}
-
-          {/* Discussion */}
-          {playerData && (
-            <Discussion
-              courseId={courseId}
-              lectureId={playerData.lectureId}
             />
           )}
 
@@ -400,18 +480,8 @@ const Player = () => {
             )}
           </div>
 
-          <Footer />
         </div>
       </div>
-
-      {/* Quiz Modal */}
-      {showQuiz && (
-        <QuizModal
-          courseId={courseId}
-          chapterId={showQuiz}
-          onClose={() => setShowQuiz(null)}
-        />
-      )}
     </div>
   );
 };

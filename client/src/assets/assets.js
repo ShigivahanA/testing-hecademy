@@ -37,11 +37,13 @@ import lesson_icon from './lesson_icon.svg'
 import bookflip from './bookflip.gif'
 import certificateTemplate from './certificateTemplate.png'
 import message from './message.svg'
+import quizz from './quizz.svg'
 
 
 export const assets = {
     logo,
     message,
+    quizz,
     search_icon,
     sketch,
     microsoft_logo,

@@ -36,7 +36,7 @@ app.use('/api/recommendations', express.json(), recommendationRouter)
 app.use("/api/certificates",express.json(), certificaterouter);
 app.use("/api/code", express.json(), codeRouter);
 app.use("/api/discussion",express.json(), discussionRouter);
-app.use("/api/quiz", quizRouter);
+app.use("/api/quiz",express.json(), quizRouter);
 
 // Port
 const PORT = process.env.PORT || 5000

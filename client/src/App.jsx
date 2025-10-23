@@ -20,6 +20,7 @@ import CodeEditor from "./pages/student/CodeEditor";
 import StudentDashboard from './pages/student/Dashboard'
 import Leaderboard from "./pages/student/Leaderboard";
 import StudentQuestions from "./pages/educator/StudentQuestions";
+import ManageQuiz from './pages/educator/manage-quiz'
 
 const App = () => {
   const isEducatorRoute = useMatch('/educator/*')
@@ -64,6 +65,7 @@ const App = () => {
             <Route path="my-courses" element={<MyCourses />} />
             <Route path="student-enrolled" element={<StudentsEnrolled />} />
             <Route path="student-questions" element={<StudentQuestions />} />
+            <Route path="manage-quiz" element={<ManageQuiz />} />
           </Route>
           <Route path="/verify/:id" element={<VerifyCertificate />} />
           <Route path="/code-editor" element={<CodeEditor />} />

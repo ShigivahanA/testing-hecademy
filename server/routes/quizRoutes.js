@@ -11,7 +11,7 @@ import { protectEducator} from "../middlewares/authMiddleware.js";
 const quizRouter = express.Router();
 
 // Educator
-quizRouter.post("/create", protectEducator, createQuiz);
+quizRouter.post("/create", createQuiz);
 quizRouter.get("/:courseId", protectEducator, getCourseQuizzes);
 quizRouter.delete("/:quizId", protectEducator, deleteQuiz);
 

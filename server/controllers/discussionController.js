@@ -3,6 +3,8 @@ import { Discussion } from "../models/Discussion.js";
 import { clerkClient } from "@clerk/express";
 import { EDUCATOR_IDS } from "../configs/educators.js";
 import { v4 as uuidv4 } from "uuid";
+import { sendEmail } from "../utils/sendEmail.js";
+import User from "../models/User.js";
 
 /**
  * ✅ 1. Get discussions for specific course or lecture
@@ -66,6 +68,23 @@ export const startDiscussion = async (req, res) => {
 
     discussion.threads.push(thread);
     await discussion.save();
+    // ✅ Notify the course educator
+const educator = await User.findOne({ _id: discussion.courseId.educator });
+if (educator) {
+  const link = `${process.env.FRONTEND_URL}/player/${courseId}`;
+  await sendEmail({
+    to: educator.email,
+    subject: `New Question in ${discussion.courseId.courseTitle}`,
+    html: `
+      <h2>Hello ${educator.name},</h2>
+      <p>A student just asked a new question in your course <b>${discussion.courseId.courseTitle}</b>.</p>
+      <p><i>"${message}"</i></p>
+      <a href="${link}" target="_blank" style="display:inline-block;padding:10px 16px;background:#2563eb;color:white;border-radius:8px;text-decoration:none;">View Discussion</a>
+      <p>— Hecademy Team</p>
+    `,
+  });
+}
+
 
     res.json({ success: true, message: "Discussion started", discussion });
   } catch (error) {
@@ -106,6 +125,48 @@ export const replyToThread = async (req, res) => {
 
     thread.replies.push({ userId, name, imageUrl, message, isEducator });
     await discussion.save();
+    // ✅ Notify the other party (student or educator)
+const originalPosterId = thread.parentMessage.userId;
+
+// Get both user details
+const replier = await User.findOne({ _id: userId });
+const originalPoster = await User.findOne({ _id: originalPosterId });
+const course = await Discussion.findById(discussion._id).populate("courseId", "courseTitle");
+
+// If educator replied → notify student
+if (EDUCATOR_IDS.includes(userId) && originalPoster) {
+  const link = `${process.env.FRONTEND_URL}/player/${course.courseId._id}?lecture=${discussion.lectureId}`;
+  await sendEmail({
+    to: originalPoster.email,
+    subject: `📩 New Reply from Educator - ${course.courseId.courseTitle}`,
+    html: `
+      <h2>Hello ${originalPoster.name},</h2>
+      <p>Your question in <b>${course.courseId.courseTitle}</b> just got a reply from your educator.</p>
+      <p><i>"${message}"</i></p>
+      <a href="${link}" target="_blank" style="display:inline-block;padding:10px 16px;background:#10b981;color:white;border-radius:8px;text-decoration:none;">View Reply</a>
+      <p>— Hecademy Team</p>
+    `,
+  });
+}
+// If student replied → notify educator
+else if (!EDUCATOR_IDS.includes(userId) && replier && course?.courseId?.educator) {
+  const educator = await User.findOne({ _id: course.courseId.educator });
+  if (educator) {
+    const link = `${process.env.FRONTEND_URL}/player/${course.courseId._id}?lecture=${discussion.lectureId}`;
+    await sendEmail({
+      to: educator.email,
+      subject: `New Student Reply in ${course.courseId.courseTitle}`,
+      html: `
+        <h2>Hello ${educator.name},</h2>
+        <p>${replier.name} just replied to a discussion in your course <b>${course.courseId.courseTitle}</b>.</p>
+        <p><i>"${message}"</i></p>
+        <a href="${link}" target="_blank" style="display:inline-block;padding:10px 16px;background:#2563eb;color:white;border-radius:8px;text-decoration:none;">View Reply</a>
+        <p>— Hecademy Team</p>
+      `,
+    });
+  }
+}
+
 
     res.json({ success: true, message: "Reply added", discussion });
   } catch (error) {

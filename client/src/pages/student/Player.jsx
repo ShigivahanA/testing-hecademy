@@ -34,6 +34,9 @@ const Player = () => {
   const [playerData, setPlayerData] = useState(null);
   const [initialRating, setInitialRating] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const params = new URLSearchParams(location.search);
+  const initialLecture = params.get("lecture");
+
 
   // ✅ Get course data
   const getCourseData = () => {

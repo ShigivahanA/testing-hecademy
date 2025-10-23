@@ -4,14 +4,19 @@ import Course from "../models/Course.js";
 import User from "../models/User.js";
 
 export const createQuiz = async (req, res) => {
+    console.log("Creating quiz:", req.body, "Educator:", req.auth.userId);
   try {
     const educatorId = req.auth.userId;
     const { courseId, chapterId, title, questions, passPercentage } = req.body;
 
     const course = await Course.findById(courseId);
-    if (!course || course.educator !== educatorId) {
-      return res.json({ success: false, message: "Unauthorized educator or invalid course" });
-    }
+    if (!course || course.educator.toString() !== educatorId.toString()) {
+  return res.json({
+    success: false,
+    message: "Unauthorized educator or invalid course",
+  });
+}
+
 
     const newQuiz = new Quiz({
       courseId,

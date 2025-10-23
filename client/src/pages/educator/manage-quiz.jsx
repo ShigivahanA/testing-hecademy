@@ -55,18 +55,22 @@ const ManageQuiz = () => {
 
       const token = await getToken();
       const { data } = await axios.post(
-        `${backendUrl}/api/quiz/create`,
-        {
-          courseId: form.courseId,
-          chapterId: form.chapterId,
-          title: form.title,
-          passPercentage: form.passPercentage,
-          questions,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  `${backendUrl}/api/quiz/create`,
+  {
+    courseId: form.courseId,
+    chapterId: form.chapterId,
+    title: form.title,
+    passPercentage: form.passPercentage,
+    questions,
+  },
+  { headers: { Authorization: `Bearer ${token}` } }
+);
 
-      if (data.success) toast.success("Quiz created successfully!");
+if (data.success) {
+  toast.success("Quiz created successfully!");
+} else {
+  toast.error(data.message || "Failed to create quiz");
+}
     } catch (error) {
       toast.error(error.message);
     }

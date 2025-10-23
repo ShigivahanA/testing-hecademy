@@ -70,14 +70,13 @@ export const startDiscussion = async (req, res) => {
     if (course && course.educator) {
       const educator = await User.findOne({ _id: course.educator });
       if (educator) {
-        const link = `${process.env.FRONTEND_URL}/player/${courseId}?lecture=${lectureId || ""}`;
+        const link = `${process.env.FRONTEND_URL}/educator/student-questions`;;
         await sendEmail({
           to: educator.email,
-          subject: `📚 New Question in ${course.courseTitle}`,
+          subject: `New Question in ${course.courseTitle}`,
           html: `
             <h2>Hello ${educator.name},</h2>
             <p>A student just asked a new question in your course <b>${course.courseTitle}</b>.</p>
-            <p><i>"${message}"</i></p>
             <a href="${link}" target="_blank" style="display:inline-block;padding:10px 16px;background:#2563eb;color:white;border-radius:8px;text-decoration:none;">View Discussion</a>
             <p>— Hecademy Team</p>
           `,
@@ -133,7 +132,7 @@ export const replyToThread = async (req, res) => {
       const link = `${process.env.FRONTEND_URL}/player/${courseId}?lecture=${lectureId || ""}`;
       await sendEmail({
         to: originalPoster.email,
-        subject: `📩 New Reply from Educator - ${course.courseTitle}`,
+        subject: `New Reply from Educator - ${course.courseTitle}`,
         html: `
           <h2>Hello ${originalPoster.name},</h2>
           <p>Your question in <b>${course.courseTitle}</b> just got a reply from your educator.</p>
@@ -147,14 +146,13 @@ export const replyToThread = async (req, res) => {
     else if (!EDUCATOR_IDS.includes(userId) && course?.educator) {
       const educator = await User.findOne({ _id: course.educator });
       if (educator) {
-        const link = `${process.env.FRONTEND_URL}/player/${courseId}?lecture=${lectureId || ""}`;
+        const link = `${process.env.FRONTEND_URL}/educator/student-questions`;
         await sendEmail({
           to: educator.email,
-          subject: `💬 New Student Reply in ${course.courseTitle}`,
+          subject: `New Student Reply in ${course.courseTitle}`,
           html: `
             <h2>Hello ${educator.name},</h2>
             <p>${replier?.name || "A student"} just replied to a discussion in your course <b>${course.courseTitle}</b>.</p>
-            <p><i>"${message}"</i></p>
             <a href="${link}" target="_blank" style="display:inline-block;padding:10px 16px;background:#2563eb;color:white;border-radius:8px;text-decoration:none;">View Reply</a>
             <p>— Hecademy Team</p>
           `,

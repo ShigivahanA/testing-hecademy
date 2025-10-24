@@ -252,7 +252,7 @@ const Discussion = ({ courseId, lectureId = null }) => {
 
                   {/* ✉️ Reply Input */}
                   {thread.status === "open" && (isEducator || isOwner) && (
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex flex-col sm:flex-row gap-2 mt-3">
                       <input
                         type="text"
                         value={replyInputs[thread.questionId] || ""}
@@ -267,13 +267,12 @@ const Discussion = ({ courseId, lectureId = null }) => {
                       />
                       <button
                         onClick={() => sendReply(thread.questionId)}
-                        className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-1 shadow-sm transition"
+                        className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-1 shadow-sm transition"
                       >
                         <Send size={14} /> Reply
                       </button>
                     </div>
                   )}
-
                   {/* ✅ Status Buttons */}
                   {isOwner && (
                     <div className="flex justify-end mt-4">

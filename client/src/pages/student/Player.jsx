@@ -6,7 +6,6 @@ import { useParams } from "react-router-dom";
 import humanizeDuration from "humanize-duration";
 import axios from "axios";
 import { toast } from "react-toastify";
-import Rating from "../../components/student/Rating";
 import Footer from "../../components/student/Footer";
 import Loading from "../../components/student/Loading";
 import jsPDF from "jspdf";
@@ -14,20 +13,25 @@ import Discussion from "../../components/student/Discussion";
 import QuizPanel from "../../components/student/QuizPanel";
 import { Menu, X, CheckCircle } from "lucide-react";
 import Confetti from "react-confetti";
-
+import Rating from "../../components/student/Rating";
 
 const Player = () => {
   const {
     enrolledCourses,
     backendUrl,
     getToken,
-    calculateChapterTime,
     userData,
     fetchUserEnrolledCourses,
     generateCertificateForCourse,
     certificates,
     navigate,
     loadingUser,
+    currency,
+    calculateChapterTime,
+    calculateCourseDuration,
+    calculateRating,
+    calculateNoOfLectures,
+    isEducator,
   } = useContext(AppContext);
 
   const { courseId } = useParams();
@@ -35,32 +39,30 @@ const Player = () => {
   const [progressData, setProgressData] = useState(null);
   const [openSections, setOpenSections] = useState({});
   const [playerData, setPlayerData] = useState(null);
-  const [initialRating, setInitialRating] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showQuiz, setShowQuiz] = useState(null);
-  const params = new URLSearchParams(location.search);
-  const initialLecture = params.get("lecture");
   const [showConfetti, setShowConfetti] = useState(false);
+  const [initialRating, setInitialRating] = useState(0);
+  const [hasRated, setHasRated] = useState(false);
+  const [certificateReady, setCertificateReady] = useState(false);
+  const [isGeneratingCert, setIsGeneratingCert] = useState(false);
 
-
-  // ✅ Get course data
+  // ======================================================
+  // Fetch and setup
+  // ======================================================
   const getCourseData = () => {
     enrolledCourses.forEach((course) => {
       if (course._id === courseId) {
         setCourseData(course);
-        course.courseRatings.forEach((item) => {
-          if (item.userId === userData._id) setInitialRating(item.rating);
-        });
+        const userRating = course.courseRatings.find(
+          (item) => item.userId === userData._id
+        );
+        if (userRating) {
+          setInitialRating(userRating.rating);
+          setHasRated(true);
+        }
       }
     });
-  };
-
-  // ✅ Toggle chapter accordion
-  const toggleSection = (index) => {
-    setOpenSections((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
   };
 
   useEffect(() => {
@@ -72,54 +74,9 @@ const Player = () => {
     if (!loadingUser && !userData) navigate("/");
   }, [userData, loadingUser, navigate]);
 
-  // ✅ Mark lecture as completed
-  const markLectureAsCompleted = async (lectureId) => {
-    if (!userData || !courseData) return;
-    try {
-      const token = await getToken();
-      const lecture = courseData.courseContent
-        .flatMap((ch) => ch.chapterContent)
-        .find((lec) => lec.lectureId === lectureId);
-
-      const lectureDuration = lecture?.lectureDuration || 0;
-      const { data } = await axios.post(
-        backendUrl + "/api/user/update-course-progress",
-        { courseId, lectureId, duration: lectureDuration },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (data.success) {
-        toast.success(data.message);
-        setShowConfetti(true);
-        await getCourseProgress();
-
-      // 🎯 Check if all lectures are now completed
-      const totalLectures = courseData.courseContent.reduce(
-        (t, ch) => t + ch.chapterContent.length,
-        0
-      );
-
-      const updatedCompleted = data.updatedProgress?.lectureCompleted?.length ||
-        progressData?.lectureCompleted?.length + 1;
-
-      if (updatedCompleted >= totalLectures) {
-        // ✅ Course fully completed — reset player
-        setPlayerData(null);
-        setShowQuiz(null);
-
-        // Smoothly scroll to the top (home thumbnail view)
-        setTimeout(() => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }, 500);
-      }
-        setTimeout(() => setShowConfetti(false), 4000); 
-      } else toast.error(data.message);
-    } catch (error) {
-      toast.error(error.message);
-    }
-  };
-
-  // ✅ Fetch progress
+  // ======================================================
+  // Fetch progress data
+  // ======================================================
   const getCourseProgress = async () => {
     try {
       const token = await getToken();
@@ -134,14 +91,58 @@ const Player = () => {
     }
   };
 
-  // ✅ Certificate PDF
+  // ======================================================
+  // Mark lecture completed
+  // ======================================================
+  const markLectureAsCompleted = async (lectureId) => {
+    if (!userData || !courseData) return;
+    try {
+      const token = await getToken();
+      const lecture = courseData.courseContent
+        .flatMap((ch) => ch.chapterContent)
+        .find((lec) => lec.lectureId === lectureId);
+      const lectureDuration = lecture?.lectureDuration || 0;
+      const { data } = await axios.post(
+        backendUrl + "/api/user/update-course-progress",
+        { courseId, lectureId, duration: lectureDuration },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.success) {
+        toast.success(data.message);
+        setShowConfetti(true);
+        await getCourseProgress();
+
+        const totalLectures = courseData.courseContent.reduce(
+          (t, ch) => t + ch.chapterContent.length,
+          0
+        );
+        const updatedCompleted =
+          data.updatedProgress?.lectureCompleted?.length ||
+          progressData?.lectureCompleted?.length + 1;
+
+        if (updatedCompleted >= totalLectures) {
+          setPlayerData(null);
+          setShowQuiz(null);
+          setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 400);
+        }
+
+        setTimeout(() => setShowConfetti(false), 4000);
+      } else toast.error(data.message);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  // ======================================================
+  // Download Certificate PDF
+  // ======================================================
   const downloadCertificatePDF = (course, user, certificate) => {
     const userName = user?.name || "Student";
     const courseName = course?.courseTitle || "Unnamed Course";
     const rawDate = new Date(certificate?.issueDate || Date.now());
     const issueDate = `${rawDate.getDate()}-${rawDate.getMonth() + 1}-${rawDate.getFullYear()}`;
     const verifyLink = `${window.location.origin}/verify/${certificate?.certificateId}`;
-
     const doc = new jsPDF("landscape", "pt", "a4");
     doc.addImage(assets.certificateTemplate, "PNG", 0, 0, 842, 595);
     doc.setFont("helvetica", "bold");
@@ -158,14 +159,9 @@ const Player = () => {
     doc.save(`${userName}_${courseName}_certificate.pdf`);
   };
 
-  const isCourseCompleted =
-    progressData &&
-    progressData.lectureCompleted.length ===
-      courseData?.courseContent?.reduce(
-        (total, chapter) => total + chapter.chapterContent.length,
-        0
-      );
-
+  // ======================================================
+  // Rating handler
+  // ======================================================
   const handleRate = async (rating) => {
     try {
       const token = await getToken();
@@ -175,7 +171,8 @@ const Player = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (data.success) {
-        toast.success(data.message);
+        toast.success("Thank you for rating!");
+        setHasRated(true);
         fetchUserEnrolledCourses();
       }
     } catch (error) {
@@ -183,41 +180,70 @@ const Player = () => {
     }
   };
 
+  // ======================================================
+  // Certificate tracking
+  // ======================================================
   useEffect(() => {
     if (userData) getCourseProgress();
   }, [userData]);
 
   useEffect(() => {
-    if (isCourseCompleted && courseData && userData) {
-      const alreadyHasCert = certificates.some(
+    if (
+      progressData &&
+      courseData &&
+      userData &&
+      progressData.lectureCompleted.length ===
+        courseData.courseContent.reduce(
+          (t, ch) => t + ch.chapterContent.length,
+          0
+        )
+    ) {
+      const certExists = certificates.some(
         (c) => c.courseId._id === courseData._id
       );
-      if (!alreadyHasCert)
+      if (!certExists) {
+        setIsGeneratingCert(true);
         generateCertificateForCourse(courseData, userData);
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 5000);
+        setCertificateReady(false);
+        setTimeout(() => setIsGeneratingCert(false), 5000);
+      } else {
+        setCertificateReady(true);
+      }
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 5000);
     }
-  }, [isCourseCompleted, courseData, userData, certificates]);
+  }, [progressData, courseData, userData, certificates]);
+
+  // Utility
+  const toggleSection = (index) =>
+    setOpenSections((prev) => ({ ...prev, [index]: !prev[index] }));
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
-  if (!userData || !courseData) return <Loading />;
+  const isCourseCompleted =
+    progressData &&
+    progressData.lectureCompleted.length ===
+      courseData?.courseContent?.reduce(
+        (total, chapter) => total + chapter.chapterContent.length,
+        0
+      );
 
-  return (
+  if (!userData || !courseData) return <Loading />;
+    return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-gray-50">
+      {/* 🎉 Confetti */}
       {showConfetti && (
-          <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center animate-fade-in-out pointer-events-none"
-          >
-            <Confetti
-              width={window.innerWidth}
-              height={window.innerHeight}
-              numberOfPieces={350}
-              gravity={0.25}
-              recycle={false}
-            />
-          </div>
-        )}
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center animate-fade-in-out pointer-events-none">
+          <Confetti
+            width={window.innerWidth}
+            height={window.innerHeight}
+            numberOfPieces={350}
+            gravity={0.25}
+            recycle={false}
+          />
+        </div>
+      )}
+
       {/* Sidebar */}
       <div
         className={`fixed z-50 top-0 left-0 h-full w-72 lg:w-80 bg-white border-r border-gray-200 shadow-lg transform transition-transform duration-300 ${
@@ -228,12 +254,12 @@ const Player = () => {
         <div className="flex justify-between items-center p-4 border-b bg-gray-50 sticky top-0 z-10">
           <h2
             className="text-lg font-semibold text-gray-800 cursor-pointer hover:text-blue-600 transition"
-           onClick={() => {
-            setPlayerData(null);
-            setShowQuiz(null);
-            toggleSidebar();
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
+            onClick={() => {
+              setPlayerData(null);
+              setShowQuiz(null);
+              toggleSidebar();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
           >
             {courseData.courseTitle}
           </h2>
@@ -245,9 +271,9 @@ const Player = () => {
           </button>
         </div>
 
-        {/* Scrollable Sidebar Content */}
+        {/* Scrollable Sidebar */}
         <div className="overflow-y-auto h-[calc(100%-64px)] p-4 space-y-4">
-          {/* Progress Bar */}
+          {/* Progress */}
           {progressData && (
             <div className="bg-blue-50 border border-cyan-200 rounded-lg p-3 shadow-sm">
               <div className="flex justify-between text-sm text-gray-700 mb-2">
@@ -305,6 +331,7 @@ const Player = () => {
                 />
               </div>
 
+              {/* Lectures */}
               <div
                 className={`transition-all overflow-hidden ${
                   openSections[index] ? "max-h-[600px]" : "max-h-0"
@@ -343,15 +370,7 @@ const Player = () => {
                         }`}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 w-full truncate">
-                          <span
-                            className={`truncate ${
-                              isCompleted
-                                ? "text-green-700"
-                                : isSelected
-                                ? "text-blue-700"
-                                : ""
-                            }`}
-                          >
+                          <span className="truncate">
                             {lecture.lectureTitle}
                           </span>
                           <span className="text-xs text-gray-500 sm:ml-auto">
@@ -367,57 +386,59 @@ const Player = () => {
                 </ul>
 
                 {/* Chapter Quiz */}
-                {(() => {
-                  const hasPassedQuiz =
-                    userData?.activityLog?.some((log) => {
-                      const logCourseId =
-                        typeof log.courseId === "object"
-                          ? log.courseId?._id || log.courseId?.$oid
-                          : log.courseId;
+                {/* ✅ Chapter Quiz Button with Status */}
+{(() => {
+  const hasPassedQuiz =
+    userData?.activityLog?.some((log) => {
+      const logCourseId =
+        typeof log.courseId === "object"
+          ? log.courseId?._id || log.courseId?.$oid
+          : log.courseId;
+      return (
+        log.action === "completed_quiz" &&
+        logCourseId === courseId &&
+        log.details?.chapterId === chapter.chapterId &&
+        log.details?.passed === true
+      );
+    }) ?? false;
 
-                      return (
-                        log.action === "completed_quiz" &&
-                        logCourseId === courseId &&
-                        log.details?.chapterId === chapter.chapterId &&
-                        log.details?.passed === true
-                      );
-                    }) ?? false;
+  const isInProgress = showQuiz === chapter.chapterId;
 
-                  const isInProgress = showQuiz === chapter.chapterId;
+  return (
+    <div className="flex justify-center mb-3">
+      <button
+        onClick={() => {
+          setPlayerData(null);
+          setShowQuiz(chapter.chapterId);
+          setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
+          toggleSidebar();
+        }}
+        disabled={isInProgress}
+        className={`m-2 w-[90%] text-xs px-3 py-2 rounded-md font-medium transition-all duration-200 ${
+          hasPassedQuiz
+            ? "bg-green-600 text-white hover:bg-green-700"
+            : isInProgress
+            ? "bg-blue-600 text-white animate-pulse"
+            : "bg-yellow-500 hover:bg-yellow-600 text-white"
+        }`}
+      >
+        {isInProgress
+          ? "Quiz in Progress"
+          : hasPassedQuiz
+          ? "Quiz Completed"
+          : "Take Chapter Quiz"}
+      </button>
+    </div>
+  );
+})()}
 
-                  return (
-                    <button
-                      onClick={() => {
-                        setPlayerData(null);
-                        setShowQuiz(chapter.chapterId);
-                        setTimeout(() => {
-                          window.scrollTo({ top: 0, behavior: "smooth" });
-                        }, 100);
-                        toggleSidebar();
-                      }}
-                      className={`m-3 w-[90%] text-xs px-3 py-2 rounded-md transition font-medium ${
-                        isInProgress
-                          ? "bg-green-600 text-white"
-                          : hasPassedQuiz
-                          ? "bg-green-500 hover:bg-green-600 text-white"
-                          : "bg-yellow-500 hover:bg-yellow-600 text-white"
-                      }`}
-                    >
-                      {isInProgress
-                        ? "Quiz in Progress"
-                        : hasPassedQuiz
-                        ? "Quiz Completed"
-                        : "Take Chapter Quiz"}
-                    </button>
-                  );
-                })()}
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Overlay when sidebar open */}
+      {/* Overlay */}
       {isSidebarOpen && (
         <div
           onClick={toggleSidebar}
@@ -425,7 +446,7 @@ const Player = () => {
         ></div>
       )}
 
-      {/* Main Player Area */}
+      {/* MAIN PLAYER AREA */}
       <div className="flex-1 flex flex-col overflow-y-auto h-full relative">
         {/* Header */}
         <div className="flex justify-between items-center px-5 py-4 bg-white border-b shadow-sm sticky top-0 z-30">
@@ -443,19 +464,20 @@ const Player = () => {
 
         {/* Main Content */}
         <div className="p-4 sm:p-6 lg:p-10 space-y-10 overflow-y-auto">
-          {/* Video / Quiz */}
+          {/* 🎯 QUIZ / VIDEO */}
           {showQuiz ? (
             <QuizPanel
               courseId={courseId}
               chapterId={showQuiz}
               onClose={() => setShowQuiz(null)}
-              onPass={() => {
+              onPass={async () => {
                 toast.success("Quiz Passed!");
-                fetchUserEnrolledCourses();
+                await fetchUserEnrolledCourses();
+                await getCourseProgress();
               }}
             />
           ) : playerData ? (
-            <div>
+            <>
               <YouTube
                 className="w-full"
                 iframeClassName="w-full aspect-video max-w-6xl mx-auto rounded-xl shadow-lg"
@@ -467,9 +489,7 @@ const Player = () => {
                   {playerData.lectureTitle}
                 </p>
                 <button
-                  onClick={() =>
-                    markLectureAsCompleted(playerData.lectureId)
-                  }
+                  onClick={() => markLectureAsCompleted(playerData.lectureId)}
                   className="text-blue-600 text-sm sm:text-base hover:underline"
                 >
                   {progressData?.lectureCompleted?.some(
@@ -479,69 +499,206 @@ const Player = () => {
                     : "Mark Complete"}
                 </button>
               </div>
+
               <div className="mt-8">
                 <Discussion
                   courseId={courseId}
                   lectureId={playerData.lectureId}
                 />
               </div>
-            </div>
+            </>
           ) : (
-            <div className="flex justify-center items-center w-full">
-              <img
-                src={courseData.courseThumbnail}
-                alt="Course Thumbnail"
-                className="rounded-lg shadow-lg max-h-[450px] object-cover"
-              />
+            // 🏠 HOME VIEW (CourseDetails Layout Embedded)
+            <div className="w-full flex flex-col lg:flex-row items-start justify-between gap-10 mt-8">
+              {/* Left: Thumbnail */}
+              <div className="w-full lg:w-1/2 bg-white shadow-md rounded-lg overflow-hidden">
+                <img
+                  src={courseData.courseThumbnail}
+                  alt={courseData.courseTitle}
+                  className="w-full object-cover max-h-[420px]"
+                />
+              </div>
+
+              {/* Right: Course Navigation */}
+              <div className="flex-1 w-full">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                  Course Content
+                </h2>
+                {courseData.courseContent.map((chapter, index) => (
+                  <div
+                    key={index}
+                    className="border border-gray-200 bg-white mb-3 rounded-lg shadow-sm"
+                  >
+                    <div
+                      className="flex justify-between items-center px-4 py-3 cursor-pointer"
+                      onClick={() => toggleSection(index)}
+                    >
+                      <p className="font-medium text-gray-700">
+                        {chapter.chapterTitle}
+                      </p>
+                      <img
+                        src={assets.down_arrow_icon}
+                        alt="arrow"
+                        className={`w-4 h-4 transition-transform ${
+                          openSections[index] ? "rotate-180" : ""
+                        }`}
+                      />
+                    </div>
+
+                    <div
+                      className={`overflow-hidden transition-all duration-300 ${
+                        openSections[index] ? "max-h-96" : "max-h-0"
+                      }`}
+                    >
+                      <ul className="list-disc md:pl-10 pl-4 pr-4 py-2 text-gray-600 border-t border-gray-200">
+                        {chapter.chapterContent.map((lecture, i) => (
+                          <li
+                            key={i}
+                            onClick={() => {
+                              setPlayerData({
+                                ...lecture,
+                                chapter: index + 1,
+                                lecture: i + 1,
+                              });
+                              setShowQuiz(null);
+                              setTimeout(
+                                () =>
+                                  window.scrollTo({
+                                    top: 0,
+                                    behavior: "smooth",
+                                  }),
+                                100
+                              );
+                            }}
+                            className="flex justify-between items-center cursor-pointer py-2 hover:text-blue-600"
+                          >
+                            <span>{lecture.lectureTitle}</span>
+                            <span className="text-xs text-gray-500">
+                              {humanizeDuration(
+                                lecture.lectureDuration * 60 * 1000,
+                                { units: ["m"], round: true }
+                              )}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      {/* ✅ CourseDetails Quiz Button with Status */}
+{(() => {
+  const hasPassedQuiz =
+    userData?.activityLog?.some((log) => {
+      const logCourseId =
+        typeof log.courseId === "object"
+          ? log.courseId?._id || log.courseId?.$oid
+          : log.courseId;
+      return (
+        log.action === "completed_quiz" &&
+        logCourseId === courseId &&
+        log.details?.chapterId === chapter.chapterId &&
+        log.details?.passed === true
+      );
+    }) ?? false;
+
+  const isInProgress = showQuiz === chapter.chapterId;
+
+  return (
+    <div className="flex justify-center pb-3">
+      <button
+        onClick={() => {
+          setPlayerData(null);
+          setShowQuiz(chapter.chapterId);
+          setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
+        }}
+        disabled={isInProgress}
+        className={`text-sm px-4 py-2 rounded-md font-medium transition-all duration-200 ${
+          hasPassedQuiz
+            ? "bg-green-600 text-white hover:bg-green-700"
+            : isInProgress
+            ? "bg-blue-600 text-white animate-pulse"
+            : "bg-yellow-500 hover:bg-yellow-600 text-white"
+        }`}
+      >
+        {isInProgress
+          ? "Quiz in Progress"
+          : hasPassedQuiz
+          ? "Quiz Completed"
+          : "Take Chapter Quiz"}
+      </button>
+    </div>
+  );
+})()}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+          {/* ⭐ RATING & CERTIFICATE (below CourseDetails) */}
+          {!playerData && !showQuiz && isCourseCompleted && (
+            <div className="flex flex-col items-center w-full mt-10 space-y-8">
+              {/* Rating Section */}
+              <div className="p-6 text-center w-full max-w-2xl bg-white rounded-xl shadow-sm">
+                <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-5">
+                  <h2 className="text-lg font-semibold text-gray-800">
+                    Rate this Course
+                  </h2>
+                  <Rating initialRating={initialRating} onRate={handleRate} />
+                </div>
 
-          {/* Rating & Certificate */}
-          <div className="border-t pt-8 mt-10">
-            <div className="flex items-center gap-2 mb-5">
-              <h1 className="text-xl font-bold">Rate this Course:</h1>
-              <Rating initialRating={initialRating} onRate={handleRate} />
-            </div>
-
-            {isCourseCompleted && (
-              <div className="text-center bg-green-50 border border-green-200 rounded-lg p-8 shadow-sm">
-                <h1 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-3">
-                  You’ve successfully completed this course!
-                </h1>
-                <button
-                  onClick={() => {
-                    const cert = certificates.find(
-                      (c) => c.courseId._id === courseData._id
-                    );
-                    if (cert)
-                      downloadCertificatePDF(courseData, userData, cert);
-                  }}
-                  disabled={
-                    !certificates.find(
-                      (c) => c.courseId._id === courseData._id
-                    )
-                  }
-                  className={`mt-3 w-full sm:w-auto px-6 py-3 bg-green-600 text-white font-medium text-lg rounded-lg hover:bg-green-700 transition-transform duration-500 hover:scale-105 ${
-                    certificates.find(
-                      (c) => c.courseId._id === courseData._id
-                    )
-                      ? "opacity-100"
-                      : "opacity-60 cursor-not-allowed"
-                  }`}
-                >
-                  Download Certificate
-                </button>
+                {!hasRated && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Please submit your rating to unlock your certificate.
+                  </p>
+                )}
               </div>
-            )}
-          </div>
+
+              {/* Certificate Section */}
+              <div className="text-center bg-gradient-to-br from-green-50 via-white to-green-100 border border-green-200 rounded-2xl p-8 shadow-md w-full max-w-2xl transition-all">
+                <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800 mb-3">
+                  🎓 Course Completed!
+                </h1>
+
+                {hasRated ? (
+                  certificateReady ? (
+                    <button
+                      onClick={() => {
+                        const cert = certificates.find(
+                          (c) => c.courseId._id === courseData._id
+                        );
+                        if (cert)
+                          downloadCertificatePDF(courseData, userData, cert);
+                      }}
+                      className="mt-3 px-8 py-3 bg-green-600 text-white font-medium text-lg rounded-lg hover:bg-green-700 transition-transform duration-300 hover:scale-105"
+                    >
+                      Download Certificate
+                    </button>
+                  ) : isGeneratingCert ? (
+                    <p className="text-green-700 font-medium animate-pulse">
+                      Generating your certificate... ⏳
+                    </p>
+                  ) : (
+                    <p className="text-gray-600 font-medium">
+                      Please rate the course to generate your certificate.
+                    </p>
+                  )
+                ) : (
+                  <p className="text-gray-600 font-medium">
+                    Please rate the course to generate your certificate.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Footer */}
         <Footer />
       </div>
     </div>
   );
 };
 
+// ✨ Fade Animation Style for Confetti
 <style>
 {`
 @keyframes fadeInOut {
@@ -550,12 +707,10 @@ const Player = () => {
   90% { opacity: 1; }
   100% { opacity: 0; }
 }
-
 .animate-fade-in-out {
   animation: fadeInOut 4s ease-in-out forwards;
 }
 `}
 </style>
-
 
 export default Player;

@@ -133,14 +133,7 @@ const Discussion = ({ courseId, lectureId = null }) => {
     );
 
   return (
-    <div className="sm:m-10 bg-gradient-to-b from-white to-gray-50 border border-gray-200 sm:rounded-2xl shadow-md p-5 sm:p-8 transition-all relative">
-      {/* Background fetch spinner (top-right corner)
-      {backgroundFetching && (
-        <div className="absolute top-4 right-4 flex items-center gap-1 text-xs text-gray-400">
-          <RefreshCw size={12} className="animate-spin" /> updating…
-        </div>
-      )} */}
-
+    <div className="sm:m-10 p-5 sm:p-8 transition-all relative">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">

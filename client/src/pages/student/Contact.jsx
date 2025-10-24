@@ -48,13 +48,13 @@ const Contact = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-b from-cyan-50 to-gray-50 py-10 px-6 md:px-36 text-gray-700">
+      <div className="min-h-screen bg-gradient-to-b from-cyan-100/70 py-10 px-6 md:px-36 text-gray-700">
         <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
           Contact Us
         </h1>
 
         {/* Description */}
-        <p className="text-center max-w-3xl mx-auto text-sm sm:text-base mb-12 leading-relaxed">
+        <p className="text-justify max-w-3xl mx-auto text-sm sm:text-base mb-12 leading-relaxed">
           Have questions, suggestions, or feedback? We’d love to hear from you.
           Whether you’re a student, educator, or institution — the Hecademy team
           is here to help you. Fill out the form below or reach us directly via
@@ -62,7 +62,7 @@ const Contact = () => {
         </p>
 
         {/* Contact Form */}
-        <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg border border-gray-100 p-8 sm:p-10 mb-20">
+        <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-lg border border-gray-100 p-8 sm:p-10 mb-20">
           <h2 className="text-xl font-semibold mb-6 text-gray-800 text-center">
             Send us a Message
           </h2>
@@ -182,28 +182,18 @@ const Contact = () => {
         </div>
 
         {/* Office Info */}
-        <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-md p-8 border border-gray-100 mb-10">
           <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
-            Our Offices
+            Our Office
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm sm:text-base">
+          <div className="text-center text-sm sm:text-base">
             <div>
-              <h3 className="font-semibold text-gray-800 mb-2">Head Office</h3>
               <p>Hecademy Technologies Pvt. Ltd.</p>
               <p>123 Innovation Street, Bengaluru, India</p>
-              <p>📞 +91 98765 43210</p>
-              <p>✉️ support@hecademy.com</p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-800 mb-2">Global Office</h3>
-              <p>Hecademy Global Learning HQ</p>
-              <p>Berlin Tech Park, Berlin, Germany</p>
-              <p>📞 +49 162 1234567</p>
-              <p>✉️ global@hecademy.com</p>
+              <p>☎ +91 9344718155</p>
+              <p>📧 support@hecademy.com</p>
             </div>
           </div>
         </div>
-      </div>
 
       <Footer />
     </>

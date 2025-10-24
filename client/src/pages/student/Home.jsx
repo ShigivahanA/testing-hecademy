@@ -11,7 +11,9 @@ import PreferenceModal from '../../components/student/PreferenceModal';
 const Home = () => {
   const { userData, isEducator } = useContext(AppContext)
   const [showModal, setShowModal] = useState(false)
-
+  useEffect(() => {
+      window.scrollTo(0, 0);
+  }, []);
   useEffect(() => {
     if (
       userData && 

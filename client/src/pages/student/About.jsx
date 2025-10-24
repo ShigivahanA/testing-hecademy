@@ -15,7 +15,7 @@ const About = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-b from-cyan-50 to-gray-50 py-10 px-6 md:px-36 leading-relaxed text-gray-700 ">
+      <div className="min-h-screen bg-gradient-to-b from-cyan-100/70 py-10 px-6 md:px-36 leading-relaxed text-gray-700 ">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">About Hecademy</h1>
 
         <p className="mb-6">

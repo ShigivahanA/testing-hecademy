@@ -32,7 +32,8 @@ export const handleContact = async (req, res) => {
       subject: "We’ve received your message – Hecademy Support",
       html: `
         <h2>Hi ${name},</h2>
-        <p>Thank you for reaching out to Hecademy! We’ve received your message and our team will get back to you within 24–48 hours.</p>
+        <p>Thank you for reaching out to Hecademy!</p>
+        <p> We’ve received your message and our team will get back to you within 24–48 hours.</p>
         <p>Meanwhile, you can visit our Help Center or check your dashboard for updates.</p>
         <br/>
         <p>Warm regards,</p>

@@ -143,7 +143,7 @@ const MyEnrollments = () => {
           {!isEducator && (
             <button
               onClick={() => setShowModal(true)}
-              className="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+              className="px-3 py-2 rounded-lg text-black text-sm font-medium hover:text-blue-700"
             >
               Change Preferences
             </button>
@@ -229,6 +229,13 @@ const MyEnrollments = () => {
               </tr>
             );
           })}
+          {ongoingCourses.length === 0 && (
+              <tr>
+                <td colSpan="4" className="text-center py-10 text-gray-500 text-sm">
+                  No active enrollments — join a course to begin learning.
+                </td>
+              </tr>
+            )}
         </tbody>
       </table>
     </div>
@@ -275,6 +282,11 @@ const MyEnrollments = () => {
         );
       })}
     </div>
+    {ongoingCourses.length === 0 && (
+  <p className="text-center text-gray-500 text-sm py-6">
+    No active enrollments — join a course to begin learning.
+  </p>
+)}
   </div>
 )}
 
@@ -331,6 +343,13 @@ const MyEnrollments = () => {
             );
           })}
         </tbody>
+        {completedCourses.length === 0 && (
+          <tr>
+            <td colSpan="3" className="text-center py-10 text-gray-500 text-sm">
+              You haven’t completed any courses yet. Finish a course to see it displayed here.
+            </td>
+          </tr>
+        )}
       </table>
     </div>
 
@@ -381,6 +400,11 @@ const MyEnrollments = () => {
           </div>
         );
       })}
+      {completedCourses.length === 0 && (
+  <p className="text-center text-gray-500 text-sm py-6">
+    You haven’t completed any courses yet. Finish a course to see it displayed here.
+  </p>
+)}
     </div>
   </div>
 )}

@@ -41,7 +41,18 @@ const App = () => {
 
   return (
     <div className="text-default min-h-screen bg-white relative">
-      <ToastContainer />
+      <ToastContainer
+        position="bottom-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       {showLoader && (
         <div
           className={`fixed inset-0 z-50 bg-white flex items-center justify-center transition-opacity duration-600 ${

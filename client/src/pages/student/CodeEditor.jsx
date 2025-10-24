@@ -193,7 +193,6 @@ if (!userData) {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-b from-cyan-50 to-gray-50 py-10 px-6 lg:px-36 transition-all">
-        {/* <div className="bg-white shadow-xl rounded-2xl p-6 sm:p-8 lg:p-10 border border-gray-100"> */}
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
             <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
@@ -310,7 +309,6 @@ if (!userData) {
             )}
           </div>
         </div>
-      {/* </div> */}
 
       <Footer />
     </>

@@ -117,11 +117,19 @@ const StudentDashboard = () => {
 
   // ✅ Generate Daily Streak (7 days visualization)
 const generateConsecutiveStreak = async (progressList) => {
+  // ✅ Helper: get true local date key (YYYY-MM-DD) respecting system timezone
+  const getLocalDateKey = (dateInput) => {
+    const d = new Date(dateInput);
+    return d.toLocaleDateString("en-CA", {
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+  };
+
   try {
     const token = await getToken();
     if (!token) return;
 
-    // Step 1️⃣: Fetch detailed course progress for each enrolled course
+    // Step 1️⃣: Fetch detailed progress for each enrolled course
     const allProgress = await Promise.all(
       enrolledCourses.map(async (course) => {
         const { data } = await axios.post(
@@ -141,48 +149,54 @@ const generateConsecutiveStreak = async (progressList) => {
 
       progress.lectureCompleted.forEach((lec) => {
         if (!lec.completedAt || lec.duration == null) return;
-        const day = new Date(lec.completedAt).toLocaleDateString("en-CA");
+
+        // ✅ Convert to proper local calendar day
+        const day = getLocalDateKey(lec.completedAt);
+
         if (!dailyMap[day]) dailyMap[day] = 0;
-        dailyMap[day] += lec.duration; // duration is in minutes
+        dailyMap[day] += lec.duration; // duration stored in minutes
       });
     });
 
-    // Step 3️⃣: Build data for last 7 days
+    // Step 3️⃣: Build data for the last 7 days (today inclusive)
     const today = new Date();
     const last7Days = [];
 
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const key = d.toISOString().split("T")[0];
+
+      const key = getLocalDateKey(d); // ✅ Use same helper here too
       const label = d.toLocaleDateString("en-US", { weekday: "short" });
       const minutes = dailyMap[key] || 0;
       const hours = minutes / 60;
 
-      last7Days.push({ day: label,date: key, Hours: Number(hours.toFixed(1)) });
+      last7Days.push({
+        day: label,
+        date: key,
+        Hours: Number(hours.toFixed(1)),
+      });
     }
 
-    // Step 4️⃣: Update chart data
+    // Step 4️⃣: Update state with chart data
     setDailyStreakData(last7Days);
 
-    // Step 5️⃣: Calculate streak (continuous nonzero days, ignoring today if not studied yet)
+    // Step 5️⃣: Calculate streak (continuous nonzero days, skip if today empty)
     let streak = 0;
-    let foundToday = false;
 
     for (let i = last7Days.length - 1; i >= 0; i--) {
       const day = last7Days[i];
-      if (i === last7Days.length - 1 && day.Hours === 0) {
-        // today has 0 hours → skip and continue to yesterday
-        foundToday = true;
-        continue;
-      }
+
+      // if today (last index) has 0 hours, skip it and continue
+      if (i === last7Days.length - 1 && day.Hours === 0) continue;
+
       if (day.Hours > 0) streak++;
       else break;
     }
 
     setStreakCount(streak);
   } catch (err) {
-    console.error("❌ generateConsecutiveStreak error:", err);
+    console.error("generateConsecutiveStreak error:", err);
   }
 };
 
@@ -204,7 +218,15 @@ const generateConsecutiveStreak = async (progressList) => {
 
     // Monthly Calendar Component (Fixed Layout)
     const LearningCalendar = ({ learnedDates = [], streakCount }) => {
-      const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+
+      // Helper: ensure local timezone-based day key
+      const getLocalDateKey = (dateInput) => {
+        const d = new Date(dateInput);
+        return d.toLocaleDateString("en-CA", {
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        });
+      };
 
       // Convert learnedDates into a Set of date strings (YYYY-MM-DD)
       const learnedSet = new Set();
@@ -221,12 +243,14 @@ const generateConsecutiveStreak = async (progressList) => {
       // Generate grid array
       const daysArray = [];
       for (let i = 0; i < firstDay; i++) daysArray.push(null);
+
       for (let d = 1; d <= totalDays; d++) {
-        const dateKey = new Date(year, month, d).toISOString().split("T")[0];
+        // ✅ Local timezone–safe date key (no UTC drift)
+        const dateKey = getLocalDateKey(new Date(year, month, d));
         daysArray.push({ day: d, learned: learnedSet.has(dateKey) });
       }
 
-      // Month name
+      // Month name and navigation
       const monthName = currentMonth.toLocaleString("default", { month: "long" });
       const changeMonth = (dir) => {
         setCurrentMonth(new Date(year, month + dir, 1));
@@ -318,7 +342,6 @@ const generateConsecutiveStreak = async (progressList) => {
       );
     };
 
-
   if (loading) return <Loading />;
 
   if (!userData) {
@@ -368,9 +391,8 @@ const generateConsecutiveStreak = async (progressList) => {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-b from-cyan-50 to-gray-50 py-10 px-6 lg:px-36 transition-all">
-        <div className="bg-white shadow-xl rounded-2xl p-6 sm:p-8 lg:p-10 border border-gray-100 space-y-10">
           {/* Header */}
-          <div>
+          <div className="mb-8 md:mb-10">
             <h1 className="text-3xl font-bold text-gray-800 mb-4">
               Dashboard
             </h1>
@@ -381,7 +403,7 @@ const generateConsecutiveStreak = async (progressList) => {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 md:mb-14">
             <InsightCard
               title="Total Courses"
               value={totalCourses}
@@ -415,7 +437,7 @@ const generateConsecutiveStreak = async (progressList) => {
           </div>
 
           {/* Charts Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 md:mb-16">
             {/* ⏱️ Learning Time Distribution */}
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-inner flex flex-col h-full min-h-[430px]">
               <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-800 mb-6 text-center">
@@ -510,7 +532,7 @@ const generateConsecutiveStreak = async (progressList) => {
           {(recommendations.length > 0 ? recommendations : recommendedCourses)
             .slice(0, 3)
             .length > 0 && (
-            <div>
+            <div className="mb-10 md:mb-16">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">
                 Recommended for You
               </h2>
@@ -542,7 +564,6 @@ const generateConsecutiveStreak = async (progressList) => {
             </a>
           </div>
         </div>
-      </div>
 
       <Footer />
     </>

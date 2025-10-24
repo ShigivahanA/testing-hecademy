@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { assets } from '../../assets/assets';
-import { motion } from 'motion/react';
+import { useNavigate } from "react-router-dom";
 
 const Footer = () => {
 
   const [result, setResult] = useState("");
+  const navigate = useNavigate();
 
   // Auto clear result after 5s
   setTimeout(() => {
@@ -39,20 +40,36 @@ const Footer = () => {
       <div className="flex flex-col md:flex-row items-start px-8 md:px-0 justify-center gap-10 md:gap-32 py-10 border-b border-white/30">
 
         <div className="flex flex-col md:items-start items-center w-full">
-          <img src={assets.logo_dark} alt="logo" />
-          <p className="mt-6 text-center md:text-left text-sm text-white/80">
+          <img src={assets.logo_dark} alt="logo" className="w-28 sm:w-32 md:w-40 lg:w-44 h-auto object-contain"/>
+          <p className="mt-6 text-center md:text-justify text-sm text-white/80">
             Hecademy combines expert teaching and smart technology to make learning truly yours.
           </p>
         </div>
 
         <div className="flex flex-col md:items-start items-center w-full">
           <h2 className="font-semibold text-white mb-5">Quick Links</h2>
-          <ul className="flex md:flex-col w-full justify-between text-sm text-white/80 md:space-y-2 underline">
-            <li><a href="#">Home</a></li>
-            <li><a href="#">About us</a></li>
-            <li><a href="#">Contact us</a></li>
-            <li><a href="#">Privacy policy</a></li>
-          </ul>
+          <ul className="flex flex-wrap justify-center md:flex-col w-full text-xs sm:text-sm text-white/80 md:space-y-2 underline gap-3 md:gap-0">
+  <li>
+    <button onClick={() => navigate("/")} className="hover:text-cyan-400 transition">
+      Home
+    </button>
+  </li>
+  <li>
+    <button onClick={() => navigate("/about")} className="hover:text-cyan-400 transition">
+      About Us
+    </button>
+  </li>
+  <li>
+    <button onClick={() => navigate("/contact")} className="hover:text-cyan-400 transition">
+      Contact Us
+    </button>
+  </li>
+  <li>
+    <button onClick={() => navigate("/privacy-policy")} className="hover:text-cyan-400 transition">
+      Privacy Policy
+    </button>
+  </li>
+</ul>
         </div>
 
         <div

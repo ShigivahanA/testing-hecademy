@@ -21,6 +21,10 @@ import StudentDashboard from './pages/student/Dashboard'
 import Leaderboard from "./pages/student/Leaderboard";
 import StudentQuestions from "./pages/educator/StudentQuestions";
 import ManageQuiz from './pages/educator/manage-quiz'
+import About from './pages/student/About';
+import Contact from './pages/student/Contact';
+import PrivacyPolicy from './pages/student/PrivacyPolicy';
+
 
 const App = () => {
   const isEducatorRoute = useMatch('/educator/*')
@@ -70,6 +74,9 @@ const App = () => {
           <Route path="/verify/:id" element={<VerifyCertificate />} />
           <Route path="/code-editor" element={<CodeEditor />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         </Routes>
       </div>
 

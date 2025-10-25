@@ -46,6 +46,15 @@ export const getCourseQuizzes = async (req, res) => {
 export const deleteQuiz = async (req, res) => {
   try {
     const { quizId } = req.params;
+    const educatorId = req.auth.userId;
+
+    const quiz = await Quiz.findById(quizId).populate("courseId", "educator");
+    if (!quiz) return res.json({ success: false, message: "Quiz not found" });
+
+    if (quiz.courseId.educator.toString() !== educatorId.toString()) {
+      return res.json({ success: false, message: "Unauthorized" });
+    }
+
     await Quiz.findByIdAndDelete(quizId);
     res.json({ success: true, message: "Quiz deleted successfully" });
   } catch (error) {
@@ -84,6 +93,27 @@ export const submitQuiz = async (req, res) => {
 
     res.json({ success: true, score, passed });
   } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
+export const getAllQuizzes = async (req, res) => {
+  try {
+    const educatorId = req.auth.userId;
+
+    // Find all courses by this educator
+    const educatorCourses = await Course.find({ educator: educatorId }).select("_id courseTitle");
+
+    // Get all their course IDs
+    const courseIds = educatorCourses.map((c) => c._id);
+
+    // Fetch quizzes linked to those courses
+    const quizzes = await Quiz.find({ courseId: { $in: courseIds } })
+      .populate("courseId", "courseTitle");
+
+    res.json({ success: true, quizzes });
+  } catch (error) {
+    console.error("Error fetching quizzes:", error);
     res.json({ success: false, message: error.message });
   }
 };

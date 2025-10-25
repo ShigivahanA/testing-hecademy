@@ -71,9 +71,11 @@ const ManageQuiz = () => {
             ...qq,
             _id: qq._id?.toString() || crypto.randomUUID(),
             options: qq.options.map(op => ({
-              ...op,
-              _id: op._id?.toString() || crypto.randomUUID(),
-            })),
+  text: op.text || "",
+  isCorrect: !!op.isCorrect, // ✅ ensure correct flag preserved
+  _id: op._id?.toString() || crypto.randomUUID(),
+})),
+
           })),
         }));
         setQuizzes(normalized);
@@ -280,7 +282,7 @@ const ManageQuiz = () => {
         if (!q.questionText?.trim()) return toast.error("Question text required");
         if (!q.options?.length) return toast.error("Each question needs options");
         if (!q.options.some((o) => o.isCorrect))
-          return toast.error("Each question must have a correct option");
+          q.options[0].isCorrect = true; 
       }
 
       // Prepare payload for API (strip local _id for options/questions)
@@ -353,13 +355,13 @@ const ManageQuiz = () => {
             }`}
             onClick={() => setTab(t)}
           >
-            {t === "add" ? "+ Add Quiz" : "🧩 Manage Quizzes"}
+            {t === "add" ? "+ Add Quiz" : "# Manage Quizzes"}
           </button>
         ))}
       </div>
 
       {tab === "add" ? (
-        <form onSubmit={handleCreateQuiz} className="flex flex-col gap-6 w-full max-w-3xl text-gray-700 p-6 mb-12 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <form onSubmit={handleCreateQuiz} className="flex flex-col gap-6 w-full max-w-3xl text-gray-700 p-6 mb-12">
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">Create New Quiz</h2>
 
           {loadingCourses ? (
@@ -514,141 +516,161 @@ const ManageQuiz = () => {
             </div>
           ) : (
             quizzes.map((quiz, qi) => (
-              <div key={quiz._id} className="bg-white border border-gray-200 rounded-lg p-5 mb-6 shadow-sm">
-                {/* Header / Meta */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="text-xs text-gray-500 mb-1">
-                      {quiz?.courseId?.courseTitle || "Course"}
-                    </div>
+  <div
+    key={quiz._id}
+    className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 mb-6 shadow-sm transition hover:shadow-md"
+  >
+    {/* ===== Header / Meta ===== */}
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="text-[11px] sm:text-xs text-gray-500 mb-1 truncate">
+          {quiz?.courseId?.courseTitle || "Course"}
+        </div>
+        <input
+          className="w-full text-base sm:text-lg font-semibold text-gray-800 border-b border-transparent focus:border-blue-300 outline-none truncate"
+          value={quiz.title}
+          onChange={(e) => updateQuizField(quiz._id, "title", e.target.value)}
+        />
+      </div>
+
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+        <div className="flex items-center justify-between sm:justify-normal gap-2 sm:gap-1">
+          <span className="text-[13px] sm:text-sm text-gray-600">Pass %</span>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={quiz.passPercentage}
+            onChange={(e) =>
+              updateQuizField(quiz._id, "passPercentage", e.target.value)
+            }
+            className="w-16 sm:w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+          />
+        </div>
+
+        <button
+          onClick={() => saveQuiz(quiz)}
+          disabled={savingQuizId === quiz._id}
+          className="flex items-center justify-center gap-1 sm:gap-2 bg-blue-600 text-white text-xs sm:text-sm px-3 py-1.5 sm:py-2 rounded hover:bg-blue-700 disabled:opacity-60 transition"
+        >
+          {savingQuizId === quiz._id ? (
+            <>
+              <Loader2 className="animate-spin" size={14} /> Saving
+            </>
+          ) : (
+            <>
+              <Save size={14} /> Save
+            </>
+          )}
+        </button>
+
+        <button
+          onClick={() => deleteQuiz(quiz._id)}
+          className="flex items-center justify-center gap-1 sm:gap-2 text-red-600 border border-transparent hover:border-red-300 hover:bg-red-50 text-xs sm:text-sm px-3 py-1.5 sm:py-2 rounded transition"
+        >
+          <Trash2 size={14} /> Delete
+        </button>
+      </div>
+    </div>
+
+    {/* ===== Questions Section ===== */}
+    <div className="mt-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <h4 className="font-medium text-gray-800 text-sm sm:text-base">
+          Questions
+        </h4>
+        <button
+          onClick={() => addQuestion(quiz._id)}
+          className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-blue-600 hover:text-blue-800 transition"
+        >
+          <Plus size={14} /> Add Question
+        </button>
+      </div>
+
+      {quiz.questions.map((q) => (
+        <div
+          key={q._id}
+          className="mt-3 border border-gray-200 rounded-md p-3 sm:p-4 bg-gray-50"
+        >
+          {/* Question Text */}
+          <div className="flex items-start gap-2">
+            <div className="flex-1">
+              <input
+                className="w-full text-[13px] sm:text-base font-medium border-b border-transparent focus:border-blue-300 outline-none bg-transparent text-gray-800"
+                placeholder="Question text"
+                value={q.questionText}
+                onChange={(e) =>
+                  updateQuestionText(quiz._id, q._id, e.target.value)
+                }
+              />
+
+              {/* Options */}
+              <div className="mt-2 space-y-2">
+                {q.options.map((op) => (
+                  <div
+                    key={op._id}
+                    className="flex items-center gap-2 w-full flex-wrap sm:flex-nowrap"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setCorrectOption(quiz._id, q._id, op._id)}
+                      title="Mark as correct"
+                      className={`p-1 sm:p-1.5 rounded border flex-shrink-0 ${
+                        op.isCorrect
+                          ? "border-green-500 text-green-600 bg-green-50"
+                          : "border-gray-300 text-gray-400"
+                      }`}
+                    >
+                      <CheckCircle2 size={14} className="sm:w-[16px]" />
+                    </button>
                     <input
-                      className="w-full text-lg font-semibold text-gray-800 border-b border-transparent focus:border-blue-300 outline-none"
-                      value={quiz.title}
-                      onChange={(e) => updateQuizField(quiz._id, "title", e.target.value)}
+                      className="flex-1 min-w-[60%] sm:min-w-0 px-2 py-1 border rounded text-[13px] sm:text-sm"
+                      placeholder="Option text"
+                      value={op.text}
+                      onChange={(e) =>
+                        updateOptionText(
+                          quiz._id,
+                          q._id,
+                          op._id,
+                          e.target.value
+                        )
+                      }
                     />
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm text-gray-600">Pass %</span>
-                      <input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={quiz.passPercentage}
-                        onChange={(e) =>
-                          updateQuizField(quiz._id, "passPercentage", e.target.value)
-                        }
-                        className="w-20 px-2 py-1 border rounded"
-                      />
-                    </div>
-
                     <button
-                      onClick={() => saveQuiz(quiz)}
-                      disabled={savingQuizId === quiz._id}
-                      className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 disabled:opacity-60"
+                      type="button"
+                      onClick={() =>
+                        removeOption(quiz._id, q._id, op._id)
+                      }
+                      className="p-1 text-gray-500 hover:text-red-600 flex-shrink-0"
+                      title="Remove option"
                     >
-                      {savingQuizId === quiz._id ? (
-                        <>
-                          <Loader2 className="animate-spin" size={16} /> Saving
-                        </>
-                      ) : (
-                        <>
-                          <Save size={16} /> Save
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => deleteQuiz(quiz._id)}
-                      className="flex items-center gap-2 text-red-600 px-3 py-1.5 rounded hover:bg-red-50"
-                    >
-                      <Trash2 size={16} /> Delete
+                      <X size={14} />
                     </button>
                   </div>
-                </div>
+                ))}
 
-                {/* Questions */}
-                <div className="mt-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-gray-800">Questions</h4>
-                    <button
-                      onClick={() => addQuestion(quiz._id)}
-                      className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      <Plus size={16} /> Add Question
-                    </button>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => addOption(quiz._id, q._id)}
+                  className="text-[12px] sm:text-xs mt-1 text-blue-600 hover:text-blue-800 transition"
+                >
+                  + Add option
+                </button>
+              </div>
+            </div>
 
-                  {quiz.questions.map((q) => (
-                    <div key={q._id} className="mt-3 border border-gray-200 rounded-md p-3">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-1">
-                          <input
-                            className="w-full font-medium border-b border-transparent focus:border-blue-300 outline-none text-gray-800"
-                            placeholder="Question text"
-                            value={q.questionText}
-                            onChange={(e) =>
-                              updateQuestionText(quiz._id, q._id, e.target.value)
-                            }
-                          />
-
-                          {/* Options */}
-                          <div className="mt-2 space-y-2">
-                            {q.options.map((op) => (
-                              <div key={op._id} className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => setCorrectOption(quiz._id, q._id, op._id)}
-                                  title="Mark as correct"
-                                  className={`p-1 rounded border ${
-                                    op.isCorrect
-                                      ? "border-green-500 text-green-600"
-                                      : "border-gray-300 text-gray-400"
-                                  }`}
-                                >
-                                  <CheckCircle2 size={16} />
-                                </button>
-                                <input
-                                  className="flex-1 px-2 py-1 border rounded"
-                                  placeholder="Option text"
-                                  value={op.text}
-                                  onChange={(e) =>
-                                    updateOptionText(quiz._id, q._id, op._id, e.target.value)
-                                  }
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => removeOption(quiz._id, q._id, op._id)}
-                                  className="p-1 text-gray-500 hover:text-red-600"
-                                  title="Remove option"
-                                >
-                                  <X size={16} />
-                                </button>
-                              </div>
-                            ))}
-
-                            <button
-                              type="button"
-                              onClick={() => addOption(quiz._id, q._id)}
-                              className="text-xs mt-1 text-blue-600 hover:text-blue-800"
-                            >
-                              + Add option
-                            </button>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => removeQuestion(quiz._id, q._id)}
-                          className="text-red-600 mt-1 hover:text-red-800"
-                          title="Remove question"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+            <button
+              type="button"
+              onClick={() => removeQuestion(quiz._id, q._id)}
+              className="text-red-600 mt-1 hover:text-red-800 flex-shrink-0"
+              title="Remove question"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </div>
+      ))}
                 </div>
               </div>
             ))

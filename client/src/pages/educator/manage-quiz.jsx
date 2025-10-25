@@ -1,17 +1,26 @@
+// src/pages/educator/ManageQuiz.jsx
 import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { AppContext } from "../../context/AppContext";
 import { toast } from "react-toastify";
-import { Loader2, Trash2, Edit3, ChevronDown, Save, XCircle } from "lucide-react";
+import {
+  Loader2,
+  Trash2,
+  Edit3,
+  Save,
+  X,
+  Plus,
+  CheckCircle2,
+  RefreshCw,
+} from "lucide-react";
 
 const ManageQuiz = () => {
   const { backendUrl, getToken } = useContext(AppContext);
   const [tab, setTab] = useState("add");
-  const [courses, setCourses] = useState([]);
-  const [quizzes, setQuizzes] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [editingQuiz, setEditingQuiz] = useState(null);
 
+  // Add tab
+  const [courses, setCourses] = useState([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
   const [form, setForm] = useState({
     courseId: "",
     chapterId: "",
@@ -22,42 +31,57 @@ const ManageQuiz = () => {
     answersText: "",
   });
 
-  // ==================================================
-  // 🔹 Fetch Courses (for Add Tab)
-  // ==================================================
+  // Manage tab
+  const [quizzes, setQuizzes] = useState([]);
+  const [loadingQuizzes, setLoadingQuizzes] = useState(false);
+  const [savingQuizId, setSavingQuizId] = useState(null);
+
+  // Fetch courses for Add tab
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        setLoading(true);
+        setLoadingCourses(true);
         const token = await getToken();
         const { data } = await axios.get(`${backendUrl}/api/educator/courses`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (data.success) setCourses(data.courses);
-      } catch (err) {
+      } catch {
         toast.error("Failed to load courses");
       } finally {
-        setLoading(false);
+        setLoadingCourses(false);
       }
     };
     fetchCourses();
   }, []);
 
-  // ==================================================
-  // 🔹 Fetch Quizzes (for Manage Tab)
-  // ==================================================
+  // Fetch quizzes for Manage tab
   const fetchQuizzes = async () => {
     try {
-      setLoading(true);
+      setLoadingQuizzes(true);
       const token = await getToken();
       const { data } = await axios.get(`${backendUrl}/api/quiz/all`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (data.success) setQuizzes(data.quizzes);
-    } catch (err) {
+      if (data.success) {
+        // Ensure options each have id strings for React keys
+        const normalized = data.quizzes.map(q => ({
+          ...q,
+          questions: q.questions.map(qq => ({
+            ...qq,
+            _id: qq._id?.toString() || crypto.randomUUID(),
+            options: qq.options.map(op => ({
+              ...op,
+              _id: op._id?.toString() || crypto.randomUUID(),
+            })),
+          })),
+        }));
+        setQuizzes(normalized);
+      }
+    } catch {
       toast.error("Failed to load quizzes");
     } finally {
-      setLoading(false);
+      setLoadingQuizzes(false);
     }
   };
 
@@ -65,42 +89,45 @@ const ManageQuiz = () => {
     if (tab === "manage") fetchQuizzes();
   }, [tab]);
 
-  // ==================================================
-  // 🔹 Create Quiz
-  // ==================================================
-  const handleCreateQuiz = async () => {
+  // ---------------------------
+  // Add quiz handlers
+  // ---------------------------
+  const handleCreateQuiz = async (e) => {
+    e.preventDefault();
     try {
       const course = courses.find((c) => c._id === form.courseId);
-      if (!course) return toast.error("Please select a valid course");
+      if (!course) return toast.error("Select a valid course");
 
       const chapter = course.courseContent.find(
         (ch) => ch.chapterId === form.chapterId
       );
-      if (!chapter) return toast.error("Please select a valid chapter");
+      if (!chapter) return toast.error("Select a valid chapter");
 
-      const questionLines = form.questionsText.trim().split(/\r?\n/).filter(Boolean);
-      const answerLines = form.answersText.trim().split(/\r?\n/).filter(Boolean);
+      const qs = form.questionsText.trim().split(/\r?\n/).filter(Boolean);
+      const ans = form.answersText.trim().split(/\r?\n/).filter(Boolean);
 
       const groupedOptions = form.optionsText
         .split(/optionforquiz/i)
-        .map((group) =>
-          group
-            .trim()
-            .split(/\r?\n/)
-            .filter(Boolean)
+        .map((block) =>
+          block.trim().split(/\r?\n/).filter(Boolean)
         )
         .filter((arr) => arr.length > 0);
 
-      if (questionLines.length !== answerLines.length)
+      if (qs.length !== ans.length) {
         return toast.error("Number of questions and answers mismatch");
+      }
 
-      const questions = questionLines.map((q, i) => ({
-        questionText: q.trim(),
-        options: (groupedOptions[i] || []).map((opt) => ({
-          text: opt.trim(),
-          isCorrect: opt.trim() === answerLines[i]?.trim(),
-        })),
-      }));
+      const questions = qs.map((q, i) => {
+        const opts = (groupedOptions[i] || []).map((op) => ({
+          text: op.trim(),
+          isCorrect: op.trim() === ans[i]?.trim(),
+        }));
+        if (!opts.some(o => o.isCorrect)) {
+          // default first one correct if author forgot (prevents server validation failure)
+          if (opts.length) opts[0].isCorrect = true;
+        }
+        return { questionText: q.trim(), options: opts };
+      });
 
       const token = await getToken();
       const { data } = await axios.post(
@@ -116,7 +143,7 @@ const ManageQuiz = () => {
       );
 
       if (data.success) {
-        toast.success("Quiz created successfully!");
+        toast.success("Quiz created");
         setForm({
           courseId: "",
           chapterId: "",
@@ -126,63 +153,196 @@ const ManageQuiz = () => {
           optionsText: "",
           answersText: "",
         });
-      } else toast.error(data.message || "Failed to create quiz");
-    } catch (error) {
-      toast.error(error.message);
+        if (tab === "manage") fetchQuizzes();
+      } else {
+        toast.error(data.message || "Failed to create quiz");
+      }
+    } catch (err) {
+      toast.error(err.message);
     }
   };
 
-  // ==================================================
-  // 🔹 Delete Quiz
-  // ==================================================
-  const handleDeleteQuiz = async (quizId) => {
-    if (!window.confirm("Are you sure you want to delete this quiz?")) return;
+  // ---------------------------
+  // Manage: local edit helpers
+  // ---------------------------
+  const replaceQuizInState = (quizId, updater) => {
+    setQuizzes((prev) =>
+      prev.map((q) => (q._id === quizId ? updater({ ...q }) : q))
+    );
+  };
+
+  const updateQuizField = (quizId, field, value) => {
+    replaceQuizInState(quizId, (q) => {
+      q[field] = value;
+      return q;
+    });
+  };
+
+  const addQuestion = (quizId) => {
+    replaceQuizInState(quizId, (q) => {
+      q.questions.push({
+        _id: crypto.randomUUID(),
+        questionText: "",
+        options: [
+          { _id: crypto.randomUUID(), text: "", isCorrect: true },
+          { _id: crypto.randomUUID(), text: "", isCorrect: false },
+        ],
+      });
+      return q;
+    });
+  };
+
+  const removeQuestion = (quizId, questionId) => {
+    replaceQuizInState(quizId, (q) => {
+      q.questions = q.questions.filter((qq) => qq._id !== questionId);
+      return q;
+    });
+  };
+
+  const updateQuestionText = (quizId, questionId, value) => {
+    replaceQuizInState(quizId, (q) => {
+      q.questions = q.questions.map((qq) =>
+        qq._id === questionId ? { ...qq, questionText: value } : qq
+      );
+      return q;
+    });
+  };
+
+  const addOption = (quizId, questionId) => {
+    replaceQuizInState(quizId, (q) => {
+      q.questions = q.questions.map((qq) => {
+        if (qq._id !== questionId) return qq;
+        return {
+          ...qq,
+          options: [...qq.options, { _id: crypto.randomUUID(), text: "", isCorrect: false }],
+        };
+      });
+      return q;
+    });
+  };
+
+  const removeOption = (quizId, questionId, optionId) => {
+    replaceQuizInState(quizId, (q) => {
+      q.questions = q.questions.map((qq) => {
+        if (qq._id !== questionId) return qq;
+        const filtered = qq.options.filter((op) => op._id !== optionId);
+        // Ensure at least one option remains & has a correct one
+        if (filtered.length && !filtered.some(op => op.isCorrect)) {
+          filtered[0].isCorrect = true;
+        }
+        return { ...qq, options: filtered };
+      });
+      return q;
+    });
+  };
+
+  const updateOptionText = (quizId, questionId, optionId, value) => {
+    replaceQuizInState(quizId, (q) => {
+      q.questions = q.questions.map((qq) => {
+        if (qq._id !== questionId) return qq;
+        return {
+          ...qq,
+          options: qq.options.map((op) =>
+            op._id === optionId ? { ...op, text: value } : op
+          ),
+        };
+      });
+      return q;
+    });
+  };
+
+  const setCorrectOption = (quizId, questionId, optionId) => {
+    replaceQuizInState(quizId, (q) => {
+      q.questions = q.questions.map((qq) => {
+        if (qq._id !== questionId) return qq;
+        return {
+          ...qq,
+          options: qq.options.map((op) => ({
+            ...op,
+            isCorrect: op._id === optionId,
+          })),
+        };
+      });
+      return q;
+    });
+  };
+
+  // ---------------------------
+  // Save / Delete
+  // ---------------------------
+  const saveQuiz = async (quiz) => {
+    try {
+      setSavingQuizId(quiz._id);
+      // Basic frontend validation
+      if (!quiz.title?.trim()) return toast.error("Title required");
+      if (!quiz.questions?.length) return toast.error("At least one question required");
+      for (const q of quiz.questions) {
+        if (!q.questionText?.trim()) return toast.error("Question text required");
+        if (!q.options?.length) return toast.error("Each question needs options");
+        if (!q.options.some((o) => o.isCorrect))
+          return toast.error("Each question must have a correct option");
+      }
+
+      // Prepare payload for API (strip local _id for options/questions)
+      const payload = {
+        title: quiz.title,
+        passPercentage: Number(quiz.passPercentage),
+        chapterId: quiz.chapterId, // allow changing if you render a chapter selector later
+        questions: quiz.questions.map((q) => ({
+          questionText: q.questionText,
+          options: q.options.map((o) => ({
+            text: o.text,
+            isCorrect: !!o.isCorrect,
+          })),
+        })),
+      };
+
+      const token = await getToken();
+      const { data } = await axios.put(
+        `${backendUrl}/api/quiz/${quiz._id}`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (data.success) {
+        toast.success("Quiz saved");
+        // Re-fetch so we get normalized ids from DB
+        await fetchQuizzes();
+      } else {
+        toast.error(data.message || "Failed to save quiz");
+      }
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSavingQuizId(null);
+    }
+  };
+
+  const deleteQuiz = async (quizId) => {
+    if (!window.confirm("Delete this quiz?")) return;
     try {
       const token = await getToken();
       const { data } = await axios.delete(`${backendUrl}/api/quiz/${quizId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (data.success) {
-        toast.success("Quiz deleted successfully!");
+        toast.success("Quiz deleted");
         setQuizzes((prev) => prev.filter((q) => q._id !== quizId));
-      } else toast.error("Failed to delete quiz");
+      } else {
+        toast.error(data.message || "Failed to delete quiz");
+      }
     } catch (err) {
       toast.error(err.message);
     }
   };
 
-  // ==================================================
-  // 🔹 Edit Quiz
-  // ==================================================
-  const handleEditQuiz = (quiz) => {
-    setEditingQuiz(quiz);
-  };
-
-  const handleSaveEdit = async () => {
-    try {
-      const token = await getToken();
-      const { data } = await axios.put(
-        `${backendUrl}/api/quiz/${editingQuiz._id}`,
-        editingQuiz,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (data.success) {
-        toast.success("Quiz updated successfully!");
-        setEditingQuiz(null);
-        fetchQuizzes();
-      } else toast.error(data.message || "Failed to update quiz");
-    } catch (err) {
-      toast.error(err.message);
-    }
-  };
-
-  // ==================================================
-  // 🔹 UI Rendering
-  // ==================================================
+  // ---------------------------
+  // UI
+  // ---------------------------
   return (
     <div className="min-h-screen overflow-y-auto flex flex-col items-center md:p-8 p-4 bg-gray-50">
       {/* Tabs */}
-      <div className="flex gap-4 mb-8 border-b w-full max-w-4xl">
+      <div className="flex gap-4 mb-8 border-b w-full max-w-6xl">
         {["add", "manage"].map((t) => (
           <button
             key={t}
@@ -198,26 +358,17 @@ const ManageQuiz = () => {
         ))}
       </div>
 
-      {/* Add Quiz Form */}
       {tab === "add" ? (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleCreateQuiz();
-          }}
-          className="flex flex-col gap-6 w-full max-w-3xl text-gray-700 p-6 mb-12"
-        >
-          <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-            Create New Quiz
-          </h2>
+        <form onSubmit={handleCreateQuiz} className="flex flex-col gap-6 w-full max-w-3xl text-gray-700 p-6 mb-12 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-2">Create New Quiz</h2>
 
-          {loading ? (
+          {loadingCourses ? (
             <div className="flex justify-center items-center gap-2 text-gray-500 py-8">
               <Loader2 className="animate-spin" size={22} /> Loading Courses...
             </div>
           ) : (
             <>
-              {/* Course Selector */}
+              {/* Course */}
               <div className="flex flex-col gap-1">
                 <p className="font-medium">Select Course</p>
                 <select
@@ -225,7 +376,7 @@ const ManageQuiz = () => {
                   onChange={(e) =>
                     setForm({ ...form, courseId: e.target.value, chapterId: "" })
                   }
-                  className="outline-none border border-gray-400 rounded px-3 py-2"
+                  className="outline-none border border-gray-300 rounded px-3 py-2"
                   required
                 >
                   <option value="">Choose Course</option>
@@ -237,7 +388,7 @@ const ManageQuiz = () => {
                 </select>
               </div>
 
-              {/* Chapter Selector */}
+              {/* Chapter */}
               {form.courseId && (
                 <div className="flex flex-col gap-1">
                   <p className="font-medium">Select Chapter</p>
@@ -246,7 +397,7 @@ const ManageQuiz = () => {
                     onChange={(e) =>
                       setForm({ ...form, chapterId: e.target.value })
                     }
-                    className="outline-none border border-gray-400 rounded px-3 py-2"
+                    className="outline-none border border-gray-300 rounded px-3 py-2"
                     required
                   >
                     <option value="">Choose Chapter</option>
@@ -261,20 +412,36 @@ const ManageQuiz = () => {
                 </div>
               )}
 
-              {/* Quiz Title */}
-              <div className="flex flex-col gap-1">
-                <p className="font-medium">Quiz Title</p>
-                <input
-                  type="text"
-                  placeholder="Enter Quiz Title"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="outline-none border border-gray-400 rounded px-3 py-2"
-                  required
-                />
+              {/* Title & Pass % */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                  <p className="font-medium">Quiz Title</p>
+                  <input
+                    type="text"
+                    placeholder="Enter Quiz Title"
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    className="w-full outline-none border border-gray-300 rounded px-3 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <p className="font-medium">Pass %</p>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={form.passPercentage}
+                    onChange={(e) =>
+                      setForm({ ...form, passPercentage: e.target.value })
+                    }
+                    className="w-full outline-none border border-gray-300 rounded px-3 py-2"
+                    required
+                  />
+                </div>
               </div>
 
-              {/* Questions Input */}
+              {/* Questions/Answers/Options bulk input */}
               <div className="flex flex-col gap-1">
                 <p className="font-medium">Questions (one per line)</p>
                 <textarea
@@ -283,12 +450,11 @@ const ManageQuiz = () => {
                   onChange={(e) =>
                     setForm({ ...form, questionsText: e.target.value })
                   }
-                  className="outline-none border border-gray-400 rounded px-3 py-2 h-28 resize-none"
+                  className="outline-none border border-gray-300 rounded px-3 py-2 h-28 resize-none"
                   required
                 />
               </div>
 
-              {/* Correct Answers */}
               <div className="flex flex-col gap-1">
                 <p className="font-medium">Correct Answers (one per line)</p>
                 <textarea
@@ -297,15 +463,14 @@ const ManageQuiz = () => {
                   onChange={(e) =>
                     setForm({ ...form, answersText: e.target.value })
                   }
-                  className="outline-none border border-gray-400 rounded px-3 py-2 h-28 resize-none"
+                  className="outline-none border border-gray-300 rounded px-3 py-2 h-28 resize-none"
                   required
                 />
               </div>
 
-              {/* Options Input */}
               <div className="flex flex-col gap-1">
                 <p className="font-medium">
-                  Options (separate each group with <b>optionforquiz</b>)
+                  Options (separate each question group with <b>optionforquiz</b>)
                 </p>
                 <textarea
                   placeholder={`Example:\noptionforquiz\nA\nB\nC\nD\noptionforquiz\nTrue\nFalse`}
@@ -313,31 +478,14 @@ const ManageQuiz = () => {
                   onChange={(e) =>
                     setForm({ ...form, optionsText: e.target.value })
                   }
-                  className="outline-none border border-gray-400 rounded px-3 py-2 h-40 resize-none"
+                  className="outline-none border border-gray-300 rounded px-3 py-2 h-40 resize-none"
                   required
                 />
               </div>
 
-              {/* Pass Percentage */}
-              <div className="flex flex-col gap-1 w-40">
-                <p className="font-medium">Pass Percentage</p>
-                <input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={form.passPercentage}
-                  onChange={(e) =>
-                    setForm({ ...form, passPercentage: e.target.value })
-                  }
-                  className="outline-none border border-gray-400 rounded px-3 py-2"
-                  required
-                />
-              </div>
-
-              {/* Submit Button */}
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white w-max px-6 py-2.5 rounded-lg font-semibold mt-4 transition-all"
+                className="bg-blue-600 hover:bg-blue-700 text-white w-max px-6 py-2.5 rounded-lg font-semibold mt-2 transition-all"
               >
                 Create Quiz
               </button>
@@ -345,8 +493,18 @@ const ManageQuiz = () => {
           )}
         </form>
       ) : (
-        <div className="w-full max-w-5xl">
-          {loading ? (
+        <div className="w-full max-w-6xl">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-semibold text-gray-800">Your Quizzes</h2>
+            <button
+              onClick={fetchQuizzes}
+              className="flex items-center gap-2 text-sm px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-50"
+            >
+              <RefreshCw size={16} /> Refresh
+            </button>
+          </div>
+
+          {loadingQuizzes ? (
             <div className="flex justify-center items-center gap-2 text-gray-500 py-10">
               <Loader2 className="animate-spin" size={22} /> Loading Quizzes...
             </div>
@@ -355,118 +513,146 @@ const ManageQuiz = () => {
               No quizzes found yet.
             </div>
           ) : (
-            quizzes.map((quiz, idx) => (
-              <div
-                key={quiz._id}
-                className="bg-white border border-gray-200 rounded-lg p-5 mb-5 shadow-sm"
-              >
-                {/* Header */}
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    {idx + 1}. {quiz.title}
-                  </h3>
-                  <div className="flex gap-3">
+            quizzes.map((quiz, qi) => (
+              <div key={quiz._id} className="bg-white border border-gray-200 rounded-lg p-5 mb-6 shadow-sm">
+                {/* Header / Meta */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="text-xs text-gray-500 mb-1">
+                      {quiz?.courseId?.courseTitle || "Course"}
+                    </div>
+                    <input
+                      className="w-full text-lg font-semibold text-gray-800 border-b border-transparent focus:border-blue-300 outline-none"
+                      value={quiz.title}
+                      onChange={(e) => updateQuizField(quiz._id, "title", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm text-gray-600">Pass %</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={quiz.passPercentage}
+                        onChange={(e) =>
+                          updateQuizField(quiz._id, "passPercentage", e.target.value)
+                        }
+                        className="w-20 px-2 py-1 border rounded"
+                      />
+                    </div>
+
                     <button
-                      onClick={() => handleEditQuiz(quiz)}
-                      className="text-blue-600 hover:text-blue-800 transition"
+                      onClick={() => saveQuiz(quiz)}
+                      disabled={savingQuizId === quiz._id}
+                      className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 disabled:opacity-60"
                     >
-                      <Edit3 size={18} />
+                      {savingQuizId === quiz._id ? (
+                        <>
+                          <Loader2 className="animate-spin" size={16} /> Saving
+                        </>
+                      ) : (
+                        <>
+                          <Save size={16} /> Save
+                        </>
+                      )}
                     </button>
+
                     <button
-                      onClick={() => handleDeleteQuiz(quiz._id)}
-                      className="text-red-600 hover:text-red-800 transition"
+                      onClick={() => deleteQuiz(quiz._id)}
+                      className="flex items-center gap-2 text-red-600 px-3 py-1.5 rounded hover:bg-red-50"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={16} /> Delete
                     </button>
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-500 mb-3">
-                  Pass Percentage: {quiz.passPercentage}%
-                </p>
+                {/* Questions */}
+                <div className="mt-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-800">Questions</h4>
+                    <button
+                      onClick={() => addQuestion(quiz._id)}
+                      className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
+                    >
+                      <Plus size={16} /> Add Question
+                    </button>
+                  </div>
 
-                <details className="border-t border-gray-100 pt-2">
-                  <summary className="text-blue-600 text-sm font-medium cursor-pointer flex items-center gap-1">
-                    View Questions <ChevronDown size={14} />
-                  </summary>
-                  <ul className="mt-3 space-y-2 text-gray-700 text-sm">
-                    {quiz.questions.map((q, i) => (
-                      <li key={i}>
-                        <b>Q{i + 1}:</b> {q.questionText}
-                        <ul className="pl-4 mt-1">
-                          {q.options.map((opt, j) => (
-                            <li
-                              key={j}
-                              className={
-                                opt.isCorrect
-                                  ? "text-green-600 font-medium"
-                                  : "text-gray-600"
-                              }
+                  {quiz.questions.map((q) => (
+                    <div key={q._id} className="mt-3 border border-gray-200 rounded-md p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1">
+                          <input
+                            className="w-full font-medium border-b border-transparent focus:border-blue-300 outline-none text-gray-800"
+                            placeholder="Question text"
+                            value={q.questionText}
+                            onChange={(e) =>
+                              updateQuestionText(quiz._id, q._id, e.target.value)
+                            }
+                          />
+
+                          {/* Options */}
+                          <div className="mt-2 space-y-2">
+                            {q.options.map((op) => (
+                              <div key={op._id} className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setCorrectOption(quiz._id, q._id, op._id)}
+                                  title="Mark as correct"
+                                  className={`p-1 rounded border ${
+                                    op.isCorrect
+                                      ? "border-green-500 text-green-600"
+                                      : "border-gray-300 text-gray-400"
+                                  }`}
+                                >
+                                  <CheckCircle2 size={16} />
+                                </button>
+                                <input
+                                  className="flex-1 px-2 py-1 border rounded"
+                                  placeholder="Option text"
+                                  value={op.text}
+                                  onChange={(e) =>
+                                    updateOptionText(quiz._id, q._id, op._id, e.target.value)
+                                  }
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeOption(quiz._id, q._id, op._id)}
+                                  className="p-1 text-gray-500 hover:text-red-600"
+                                  title="Remove option"
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            ))}
+
+                            <button
+                              type="button"
+                              onClick={() => addOption(quiz._id, q._id)}
+                              className="text-xs mt-1 text-blue-600 hover:text-blue-800"
                             >
-                              - {opt.text}
-                            </li>
-                          ))}
-                        </ul>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
+                              + Add option
+                            </button>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removeQuestion(quiz._id, q._id)}
+                          className="text-red-600 mt-1 hover:text-red-800"
+                          title="Remove question"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))
           )}
-        </div>
-      )}
-
-      {/* Edit Modal */}
-      {editingQuiz && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-lg">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              Edit Quiz
-            </h2>
-            <label className="block mb-2 text-sm font-medium">
-              Title:
-              <input
-                type="text"
-                value={editingQuiz.title}
-                onChange={(e) =>
-                  setEditingQuiz({ ...editingQuiz, title: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded px-3 py-2 mt-1"
-              />
-            </label>
-            <label className="block mb-2 text-sm font-medium">
-              Pass Percentage:
-              <input
-                type="number"
-                min="1"
-                max="100"
-                value={editingQuiz.passPercentage}
-                onChange={(e) =>
-                  setEditingQuiz({
-                    ...editingQuiz,
-                    passPercentage: e.target.value,
-                  })
-                }
-                className="w-full border border-gray-300 rounded px-3 py-2 mt-1"
-              />
-            </label>
-
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => setEditingQuiz(null)}
-                className="flex items-center gap-1 text-gray-600 hover:text-gray-800"
-              >
-                <XCircle size={18} /> Cancel
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                className="flex items-center gap-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
-                <Save size={18} /> Save
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

@@ -6,15 +6,18 @@ import {
   deleteQuiz,
   submitQuiz,
   getAllQuizzes,
+  updateQuiz,
 } from "../controllers/quizController.js";
-import { protectEducator} from "../middlewares/authMiddleware.js";
+import { protectEducator } from "../middlewares/authMiddleware.js";
 
 const quizRouter = express.Router();
 
+// Educator
 quizRouter.post("/create", protectEducator, createQuiz);
 quizRouter.get("/all", protectEducator, getAllQuizzes);
-quizRouter.get("/:courseId", protectEducator, getCourseQuizzes);
+quizRouter.put("/:quizId", protectEducator, updateQuiz);
 quizRouter.delete("/:quizId", protectEducator, deleteQuiz);
+quizRouter.get("/:courseId", protectEducator, getCourseQuizzes);
 
 // Student
 quizRouter.post("/submit", submitQuiz);

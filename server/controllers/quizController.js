@@ -117,3 +117,34 @@ export const getAllQuizzes = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
+export const updateQuiz = async (req, res) => {
+  try {
+    const educatorId = req.auth.userId;
+    const { quizId } = req.params;
+
+    const quiz = await Quiz.findById(quizId).populate("courseId", "educator");
+    if (!quiz) return res.json({ success: false, message: "Quiz not found" });
+
+    if (quiz.courseId.educator.toString() !== educatorId.toString()) {
+      return res.json({ success: false, message: "Unauthorized educator" });
+    }
+
+    const { title, passPercentage, questions } = req.body;
+
+    // Basic validation
+    if (!title || !questions?.length)
+      return res.json({ success: false, message: "Invalid quiz data" });
+
+    quiz.title = title;
+    quiz.passPercentage = passPercentage;
+    quiz.questions = questions;
+
+    await quiz.save();
+
+    res.json({ success: true, message: "Quiz updated successfully", quiz });
+  } catch (error) {
+    console.error("Update quiz error:", error);
+    res.json({ success: false, message: error.message });
+  }
+};

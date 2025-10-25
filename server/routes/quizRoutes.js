@@ -12,8 +12,8 @@ const quizRouter = express.Router();
 
 // Educator
 quizRouter.post("/create", createQuiz);
-quizRouter.get("/:courseId", protectEducator, getCourseQuizzes);
-quizRouter.delete("/:quizId", protectEducator, deleteQuiz);
+quizRouter.get("/:courseId", getCourseQuizzes);
+quizRouter.delete("/:quizId", deleteQuiz);
 
 // Student
 quizRouter.post("/submit",submitQuiz);

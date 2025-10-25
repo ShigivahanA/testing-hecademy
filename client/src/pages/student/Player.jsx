@@ -46,6 +46,7 @@ const Player = () => {
   const [hasRated, setHasRated] = useState(false);
   const [certificateReady, setCertificateReady] = useState(false);
   const [isGeneratingCert, setIsGeneratingCert] = useState(false);
+  const [localActivityLog, setLocalActivityLog] = useState([]);
 
   // ======================================================
   // Fetch and setup
@@ -73,6 +74,21 @@ const Player = () => {
   useEffect(() => {
     if (!loadingUser && !userData) navigate("/");
   }, [userData, loadingUser, navigate]);
+
+useEffect(() => {
+  const refresh = async () => {
+    const token = await getToken();
+    const { data } = await axios.get(`${backendUrl}/api/user/profile`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (data.success && data.user) {
+      setUserData(data.user);
+      setLocalActivityLog([...data.user.activityLog]);
+    }
+  };
+  refresh();
+}, [showQuiz]);
+
 
   // ======================================================
   // Fetch progress data
@@ -471,10 +487,21 @@ const Player = () => {
               chapterId={showQuiz}
               onClose={() => setShowQuiz(null)}
               onPass={async () => {
-                toast.success("Quiz Passed!");
-                await fetchUserEnrolledCourses();
-                await getCourseProgress();
-              }}
+  toast.success("Quiz Passed!");
+  await fetchUserEnrolledCourses();
+  await getCourseProgress();
+
+  // ✅ Fetch latest user data
+  const token = await getToken();
+  const { data } = await axios.get(`${backendUrl}/api/user/profile`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (data.success && data.user) {
+    setUserData(data.user);
+    setLocalActivityLog([...data.user.activityLog]); // ⬅️ immediate local update
+  }
+}}
             />
           ) : playerData ? (
             <>
@@ -586,7 +613,7 @@ const Player = () => {
                       {/* ✅ CourseDetails Quiz Button with Status */}
 {(() => {
   const hasPassedQuiz =
-    userData?.activityLog?.some((log) => {
+    localActivityLog?.some((log) => {
       const logCourseId =
         typeof log.courseId === "object"
           ? log.courseId?._id || log.courseId?.$oid

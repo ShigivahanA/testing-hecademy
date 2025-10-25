@@ -360,6 +360,11 @@ const QuizPanel = ({ courseId, chapterId, onClose, onPass }) => {
             >
               {result.passed ? "You Passed 🎉" : "You Didn’t Pass 😔"}
             </p>
+            <p
+              className={`font-semibold text-lg sm:text-xl mb-8 `}
+            >
+              Please refresh the page to see updated progress. if not updated automatically
+            </p>
 
             <div className="flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto">
               <button

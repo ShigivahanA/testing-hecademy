@@ -5,6 +5,7 @@ import {
   getCourseQuizzes,
   deleteQuiz,
   submitQuiz,
+  getAllQuizzes,
 } from "../controllers/quizController.js";
 import { protectEducator} from "../middlewares/authMiddleware.js";
 

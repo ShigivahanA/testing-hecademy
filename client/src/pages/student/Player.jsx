@@ -138,10 +138,13 @@ useEffect(() => {
           progressData?.lectureCompleted?.length + 1;
 
         if (updatedCompleted >= totalLectures) {
-          setPlayerData(null);
-          setShowQuiz(null);
-          setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 400);
-        }
+  setShowConfetti(true);
+  toast.success("You’ve completed all lectures! 🎉 Redirecting to feedback...");
+
+  setTimeout(() => {
+    navigate(`/feedback/${courseId}`);
+  }, 2500); // small delay for confetti celebration
+}
 
         setTimeout(() => setShowConfetti(false), 4000);
       } else toast.error(data.message);

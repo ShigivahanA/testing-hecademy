@@ -24,7 +24,7 @@ import ManageQuiz from './pages/educator/manage-quiz'
 import About from './pages/student/About';
 import Contact from './pages/student/Contact';
 import PrivacyPolicy from './pages/student/PrivacyPolicy';
-
+import Feedback from "./pages/student/Feedback";
 
 const App = () => {
   const isEducatorRoute = useMatch('/educator/*')
@@ -88,6 +88,7 @@ const App = () => {
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/feedback/:courseId" element={<Feedback />} />
         </Routes>
       </div>
 

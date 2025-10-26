@@ -296,3 +296,45 @@ export const getLeaderboard = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
+export const addFeedback = async (req, res) => {
+  try {
+    const userId = req.auth.userId;
+    const { courseId, rating, feedback } = req.body;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.json({ success: false, message: "Course not found" });
+    }
+
+    // 🟦 Check if the user already rated before
+    const existing = course.courseRatings.find(
+      (r) => r.userId === userId
+    );
+
+    if (existing) {
+      // Update existing entry
+      existing.rating = rating ?? existing.rating;
+      existing.feedback = feedback ?? existing.feedback;
+      existing.date = new Date();
+    } else {
+      // Push new rating & feedback
+      course.courseRatings.push({
+        userId,
+        rating,
+        feedback,
+        date: new Date()
+      });
+    }
+
+    await course.save();
+
+    res.json({
+      success: true,
+      message: "Feedback saved successfully",
+      courseRatings: course.courseRatings
+    });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};

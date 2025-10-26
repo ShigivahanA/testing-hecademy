@@ -32,7 +32,9 @@ const courseSchema = new mongoose.Schema({
     courseRatings: [
         {
             userId: { type: String },
-            rating: { type: Number, min: 1, max: 5 }
+            rating: { type: Number, min: 1, max: 5 },
+            feedback: { type: String, default: "" },
+            date: { type: Date, default: Date.now }
         }
     ],
     enrolledStudents: [

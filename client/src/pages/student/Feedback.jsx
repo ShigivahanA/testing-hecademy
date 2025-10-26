@@ -114,15 +114,6 @@ const Feedback = () => {
             )}
           </button>
         </form>
-
-        <div className="mt-8 text-center">
-          <p
-            onClick={() => navigate(`/player/${courseId}`)}
-            className="text-sm text-gray-500 hover:text-blue-600 cursor-pointer transition"
-          >
-            Skip feedback and return to course →
-          </p>
-        </div>
       </div>
     </div>
   );

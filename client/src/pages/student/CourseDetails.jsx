@@ -19,6 +19,8 @@ const CourseDetails = () => {
   const [courseData, setCourseData] = useState(null)
   const [playerData, setPlayerData] = useState(null)
   const [isAlreadyEnrolled, setIsAlreadyEnrolled] = useState(false)
+  const [reviewUsers, setReviewUsers] = useState({});
+
 
   const { backendUrl, currency, userData, calculateChapterTime, calculateCourseDuration, calculateRating, calculateNoOfLectures, isEducator, } = useContext(AppContext)
   const { getToken } = useAuth()
@@ -42,6 +44,39 @@ const CourseDetails = () => {
     }
 
   }
+
+  useEffect(() => {
+  const fetchReviewUsers = async () => {
+    if (!courseData || !courseData.courseRatings?.length) return;
+
+    const userIds = courseData.courseRatings
+      .map(r => r.userId)
+      .filter(Boolean);
+
+    if (userIds.length === 0) return;
+
+    try {
+      const { data } = await axios.post(
+        `${backendUrl}/api/user/get-users-by-ids`,
+        { userIds }
+      );
+
+      if (data.success) {
+        // Convert array to map { userId: {name, imageUrl} }
+        const userMap = {};
+        data.users.forEach(u => {
+          userMap[u._id] = u;
+        });
+        setReviewUsers(userMap);
+      }
+    } catch (err) {
+      console.error("Error fetching reviewer details:", err.message);
+    }
+  };
+
+  fetchReviewUsers();
+}, [courseData]);
+
 
   const [openSections, setOpenSections] = useState({});
 
@@ -173,6 +208,49 @@ const CourseDetails = () => {
             <h3 className="text-xl font-semibold text-gray-800">Course Description</h3>
             <p className="rich-text pt-3 text-justify space-y-4 leading-relaxed" dangerouslySetInnerHTML={{ __html: courseData.courseDescription }}>
             </p>
+            {courseData.courseRatings && courseData.courseRatings.length > 0 && (
+  <div className="mt-10">
+    <h3 className="text-xl font-semibold text-gray-800 mb-4">
+      What Learners Say
+    </h3>
+
+    <div className="space-y-4">
+      {courseData.courseRatings
+        .filter((r) => r.feedback && r.feedback.trim() !== "")
+        .map((r, i) => {
+          const reviewer = reviewUsers[r.userId];
+          return (
+            <div
+              key={i}
+              className="bg-white border border-gray-200 rounded-lg shadow-sm p-4"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <img
+                    src={
+                      reviewer?.imageUrl ||
+                      assets.profile_icon
+                    }
+                    alt="user"
+                    className="w-8 h-8 rounded-full border object-cover"
+                  />
+                  <p className="font-medium text-gray-700">
+                    {reviewer?.name || "Anonymous User"}
+                  </p>
+                </div>
+                <p className="text-xs text-gray-500">
+                  {r.date ? new Date(r.date).toLocaleDateString() : ""}
+                </p>
+              </div>
+              <p className="text-gray-700 text-sm leading-relaxed italic">
+                “{r.feedback}”
+              </p>
+            </div>
+          );
+        })}
+    </div>
+  </div>
+)}
           </div>
         </div>
 

@@ -353,3 +353,23 @@ export const checkFeedbackStatus = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
+export const getUsersByIds = async (req, res) => {
+  try {
+    const { userIds } = req.body; // array of userIds
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.json({ success: false, message: "No user IDs provided" });
+    }
+
+    // Fetch only name + imageUrl for display
+    const users = await User.find(
+      { _id: { $in: userIds } },
+      "name imageUrl"
+    );
+
+    res.json({ success: true, users });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};

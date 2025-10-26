@@ -63,7 +63,7 @@ const ManageFeedback = () => {
     );
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-gray-50">
+    <div className="flex-1 overflow-y-auto p-6 md:p-8 ">
       <h1 className="text-2xl font-semibold text-gray-800 mb-8">
         Manage Course Feedback
       </h1>

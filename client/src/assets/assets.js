@@ -38,6 +38,7 @@ import bookflip from './bookflip.gif'
 import certificateTemplate from './certificateTemplate.png'
 import message from './message.svg'
 import quizz from './quizz.svg'
+import feedback from './feedback.png'
 
 
 export const assets = {
@@ -46,6 +47,7 @@ export const assets = {
     quizz,
     search_icon,
     sketch,
+    feedback,
     microsoft_logo,
     walmart_logo,
     accenture_logo,

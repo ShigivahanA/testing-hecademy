@@ -2,67 +2,81 @@
 import Course from "../models/Course.js";
 import User from "../models/User.js";
 
-/* -------------------------------------------------------------------------- */
-/* 🧑‍🏫 Get all feedback for educator’s courses                               */
-/* -------------------------------------------------------------------------- */
 export const getEducatorFeedbacks = async (req, res) => {
   try {
     const educatorId = req.auth.userId;
+    console.log("Educator ID:", educatorId);
 
-    // Find all courses owned by this educator
+    // 🧑‍🏫 Fetch all courses created by this educator
     const courses = await Course.find({ educator: educatorId })
       .select("courseTitle courseRatings")
       .lean();
 
-    if (!courses || courses.length === 0) {
+    if (!courses?.length) {
+      console.log("No courses found for this educator");
       return res.json({ success: true, feedback: [] });
     }
 
-    // Collect all userIds who gave feedback
-    const userIds = courses.flatMap((c) =>
-      c.courseRatings
-        .filter((r) => r.feedback && r.feedback.trim())
-        .map((r) => r.userId)
-    );
-
-    // 🧠 Fetch user details (name + image)
-    // NOTE: using userId since you store Clerk ID as string
-    const users = await User.find({ userId: { $in: userIds } })
-      .select("name imageUrl email userId")
-      .lean();
-
-    const userMap = Object.fromEntries(users.map((u) => [u.userId, u]));
-
-    // 🧩 Build a flattened feedback list
-    const allFeedback = [];
+    // 📦 Collect feedback entries with actual comments
+    const feedbackEntries = [];
     for (const course of courses) {
-      for (const rating of course.courseRatings) {
-        if (rating.feedback && rating.feedback.trim()) {
-          allFeedback.push({
-            _id: rating._id,
+      for (const r of course.courseRatings || []) {
+        if (r.feedback && r.feedback.trim() !== "") {
+          feedbackEntries.push({
+            ...r,
             courseId: course._id,
             courseTitle: course.courseTitle,
-            userId: rating.userId,
-            feedback: rating.feedback,
-            rating: rating.rating,
-            date: rating.date,
-            hidden: rating.hidden,
-            user: userMap[rating.userId] || null,
           });
         }
       }
     }
 
+    if (!feedbackEntries.length) {
+      console.log("No feedback entries found in educator's courses");
+      return res.json({ success: true, feedback: [] });
+    }
+
+    // 🧠 Collect all unique user IDs
+    const userIds = [...new Set(feedbackEntries.map((f) => f.userId))];
+
+    // 👤 Try to fetch users using both userId and fallback to _id
+    const users = await User.find({
+      $or: [{ userId: { $in: userIds } }, { _id: { $in: userIds } }],
+    })
+      .select("name imageUrl userId _id email")
+      .lean();
+
+    // Create lookup map for both userId and _id
+    const userMap = {};
+    users.forEach((u) => {
+      if (u.userId) userMap[u.userId] = u;
+      userMap[u._id?.toString()] = u;
+    });
+
+    // 🧩 Merge user data with feedbacks
+    const allFeedback = feedbackEntries
+      .map((f) => ({
+        _id: f._id,
+        courseId: f.courseId,
+        courseTitle: f.courseTitle,
+        userId: f.userId,
+        feedback: f.feedback,
+        rating: f.rating,
+        date: f.date,
+        hidden: f.hidden,
+        user: userMap[f.userId] || { name: "Anonymous", imageUrl: null },
+      }))
+      // 🕓 Sort by most recent first
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+
     res.json({ success: true, feedback: allFeedback });
   } catch (error) {
-    console.error("Error fetching feedbacks:", error);
+    console.error("Error fetching educator feedbacks:", error);
     res.json({ success: false, message: error.message });
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/* 👁️ Toggle Feedback Visibility (Hide / Unhide)                             */
-/* -------------------------------------------------------------------------- */
+
 export const toggleFeedbackVisibility = async (req, res) => {
   try {
     const { feedbackId } = req.params;

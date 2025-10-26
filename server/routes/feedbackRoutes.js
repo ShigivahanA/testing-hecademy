@@ -5,9 +5,9 @@ import { getEducatorFeedbacks, toggleFeedbackVisibility } from "../controllers/f
 const feedbackRouter = express.Router();
 
 // Get all feedback for educator's courses
-feedbackRouter.get("/educator", protectEducator, getEducatorFeedbacks);
+feedbackRouter.get("/educator", getEducatorFeedbacks);
 
 // Toggle feedback visibility (hide/unhide)
-feedbackRouter.put("/educator/toggle/:courseId/:userId", protectEducator, toggleFeedbackVisibility);
+feedbackRouter.put("/educator/toggle/:courseId/:userId", toggleFeedbackVisibility);
 
 export default feedbackRouter;

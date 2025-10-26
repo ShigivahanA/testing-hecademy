@@ -281,12 +281,13 @@ const MyEnrollments = () => {
           </div>
         );
       })}
-    </div>
-    {ongoingCourses.length === 0 && (
+      {ongoingCourses.length === 0 && (
   <p className="text-center text-gray-500 text-sm py-6">
     No active enrollments — join a course to begin learning.
   </p>
 )}
+    </div>
+    
   </div>
 )}
 

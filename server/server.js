@@ -14,6 +14,7 @@ import codeRouter from "./routes/codeRoutes.js";
 import discussionRouter from "./routes/discussionRoute.js";
 import quizRouter from "./routes/quizRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import feedbackRouter from './routes/feedbackRoutes.js';
 
 // Initialize Express
 const app = express()
@@ -39,6 +40,7 @@ app.use("/api/code", express.json(), codeRouter);
 app.use("/api/discussion",express.json(), discussionRouter);
 app.use("/api/quiz",express.json(), quizRouter);
 app.use("/api/contact",express.json(), contactRoutes);
+app.use("/api/feedback", express.json(), feedbackRouter);
 
 // Port
 const PORT = process.env.PORT || 5000

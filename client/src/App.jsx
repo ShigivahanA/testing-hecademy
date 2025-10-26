@@ -82,6 +82,7 @@ const App = () => {
             <Route path="student-enrolled" element={<StudentsEnrolled />} />
             <Route path="student-questions" element={<StudentQuestions />} />
             <Route path="manage-quiz" element={<ManageQuiz />} />
+            <Route path="manage-feedback" element={<ManageFeedback />} />
           </Route>
           <Route path="/verify/:id" element={<VerifyCertificate />} />
           <Route path="/code-editor" element={<CodeEditor />} />
@@ -90,7 +91,6 @@ const App = () => {
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/feedback/:courseId" element={<Feedback />} />
-          <Route path="/educator/manage-feedback" element={<ManageFeedback />} />
         </Routes>
       </div>
 

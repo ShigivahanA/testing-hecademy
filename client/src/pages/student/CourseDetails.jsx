@@ -222,7 +222,7 @@ const CourseDetails = () => {
           return (
             <div
               key={i}
-              className="bg-white border border-gray-200 rounded-lg shadow-sm p-4"
+              className="bg-cyan-200/50 border border-gray-200 rounded-xl shadow-sm p-4"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">

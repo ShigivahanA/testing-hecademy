@@ -34,7 +34,8 @@ const courseSchema = new mongoose.Schema({
             userId: { type: String },
             rating: { type: Number, min: 1, max: 5 },
             feedback: { type: String, default: "" },
-            date: { type: Date, default: Date.now }
+            date: { type: Date, default: Date.now },
+            hidden: { type: Boolean, default: false }
         }
     ],
     enrolledStudents: [

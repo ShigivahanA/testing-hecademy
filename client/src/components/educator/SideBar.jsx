@@ -14,7 +14,7 @@ const SideBar = () => {
     { name: 'Student Enrolled', path: '/educator/student-enrolled', icon: assets.person_tick_icon },
     { name: 'Student Questions', path: '/educator/student-questions', icon: assets.message },
     { name: 'Manage Quiz', path: '/educator/manage-quiz', icon: assets.quizz },
-
+    { name: 'Manage Feedback', path: '/educator/manage-feedback', icon: assets.feedback },
   ];
 
   return isEducator && (

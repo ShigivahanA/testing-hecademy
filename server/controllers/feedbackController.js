@@ -56,18 +56,22 @@ export const getEducatorFeedbacks = async (req, res) => {
 };// Hide / Unhide Feedback
 export const toggleFeedbackVisibility = async (req, res) => {
   try {
-    const { courseId, userId } = req.params;
+    const { feedbackId } = req.params;
     const educatorId = req.auth.userId;
 
-    const course = await Course.findOne({ _id: courseId, educator: educatorId });
-    if (!course)
-      return res.json({ success: false, message: "Course not found or unauthorized" });
+    // find course containing this feedback
+    const course = await Course.findOne({
+      educator: educatorId,
+      "courseRatings._id": feedbackId,
+    });
 
-    const feedback = course.courseRatings.find(r => r.userId === userId);
-    if (!feedback)
-      return res.json({ success: false, message: "Feedback not found" });
+    if (!course) {
+      return res.json({ success: false, message: "Feedback not found or unauthorized" });
+    }
 
+    const feedback = course.courseRatings.id(feedbackId);
     feedback.hidden = !feedback.hidden;
+
     await course.save();
 
     res.json({

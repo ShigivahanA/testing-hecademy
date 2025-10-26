@@ -11,6 +11,10 @@ const feedbackRouter = express.Router();
 feedbackRouter.get("/educator", protectEducator, getEducatorFeedbacks);
 
 // Toggle feedback visibility (hide/unhide)
-feedbackRouter.put("/educator/toggle/:courseId/:userId", protectEducator, toggleFeedbackVisibility);
+feedbackRouter.put(
+  "/educator/toggle/:feedbackId",
+  protectEducator,
+  toggleFeedbackVisibility
+);
 
 export default feedbackRouter;

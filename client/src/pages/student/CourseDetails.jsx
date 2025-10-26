@@ -216,7 +216,7 @@ const CourseDetails = () => {
 
     <div className="space-y-4">
       {courseData.courseRatings
-        .filter((r) => r.feedback && r.feedback.trim() !== "")
+        .filter((r) => r.feedback && r.feedback.trim() !== "" && !r.hidden)
         .map((r, i) => {
           const reviewer = reviewUsers[r.userId];
           return (

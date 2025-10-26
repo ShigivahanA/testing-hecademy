@@ -13,6 +13,6 @@ userRouter.post('/get-course-progress', getUserCourseProgress)
 userRouter.post('/add-rating', addUserRating)
 userRouter.put("/preferences", updateUserPreferences)
 userRouter.get("/leaderboard", getLeaderboard);
-router.post("/feedback", addFeedback);
+userRouter.post("/feedback", addFeedback);
 
 export default userRouter;

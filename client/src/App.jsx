@@ -84,7 +84,7 @@ const App = () => {
             <Route path="student-questions" element={<StudentQuestions />} />
             <Route path="manage-quiz" element={<ManageQuiz />} />
             <Route path="manage-feedback" element={<ManageFeedback />} />
-            <Route path="manage-course" element={<ManageCourse />} />
+            <Route path="manage-courses" element={<ManageCourse />} />
           </Route>
           <Route path="/verify/:id" element={<VerifyCertificate />} />
           <Route path="/code-editor" element={<CodeEditor />} />

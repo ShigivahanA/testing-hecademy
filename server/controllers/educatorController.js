@@ -159,3 +159,63 @@ export const getEnrolledStudentsData = async (req, res) => {
         });
     }
 };
+
+export const updateCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { courseData } = req.body;
+    const educatorId = req.auth.userId;
+
+    const parsedData = JSON.parse(courseData);
+
+    // Find course and ensure educator owns it
+    const course = await Course.findById(courseId);
+    if (!course)
+      return res.json({ success: false, message: "Course not found" });
+
+    if (course.educator !== educatorId)
+      return res.json({ success: false, message: "Unauthorized Access" });
+
+    // Handle thumbnail update if new image provided
+    if (req.file) {
+      const uploadRes = await cloudinary.uploader.upload(req.file.path);
+      parsedData.courseThumbnail = uploadRes.secure_url;
+    }
+
+    // Update fields
+    Object.assign(course, parsedData);
+    await course.save();
+
+    res.json({ success: true, message: "Course updated successfully", course });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// 👁️ Toggle Course Visibility (Publish / Unpublish)
+export const toggleCourseVisibility = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const educatorId = req.auth.userId;
+
+    const course = await Course.findById(courseId);
+    if (!course)
+      return res.json({ success: false, message: "Course not found" });
+
+    if (course.educator !== educatorId)
+      return res.json({ success: false, message: "Unauthorized Access" });
+
+    course.isPublished = !course.isPublished;
+    await course.save();
+
+    res.json({
+      success: true,
+      message: `Course ${
+        course.isPublished ? "published" : "unpublished"
+      } successfully`,
+      isPublished: course.isPublished,
+    });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};

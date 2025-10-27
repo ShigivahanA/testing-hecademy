@@ -26,6 +26,7 @@ import Contact from './pages/student/Contact';
 import PrivacyPolicy from './pages/student/PrivacyPolicy';
 import Feedback from "./pages/student/Feedback";
 import ManageFeedback from './pages/educator/ManageFeedback';
+import ManageCourse from './pages/educator/ManageCourse'
 
 const App = () => {
   const isEducatorRoute = useMatch('/educator/*')
@@ -83,6 +84,7 @@ const App = () => {
             <Route path="student-questions" element={<StudentQuestions />} />
             <Route path="manage-quiz" element={<ManageQuiz />} />
             <Route path="manage-feedback" element={<ManageFeedback />} />
+            <Route path="manage-course" element={<ManageCourse />} />
           </Route>
           <Route path="/verify/:id" element={<VerifyCertificate />} />
           <Route path="/code-editor" element={<CodeEditor />} />

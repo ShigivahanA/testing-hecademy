@@ -39,6 +39,7 @@ import certificateTemplate from './certificateTemplate.png'
 import message from './message.svg'
 import quizz from './quizz.svg'
 import feedback from './feedback.png'
+import managec from './managec.svg'
 
 
 export const assets = {
@@ -48,6 +49,7 @@ export const assets = {
     search_icon,
     sketch,
     feedback,
+    managec,
     microsoft_logo,
     walmart_logo,
     accenture_logo,

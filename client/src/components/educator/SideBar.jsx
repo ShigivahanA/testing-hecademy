@@ -11,6 +11,7 @@ const SideBar = () => {
     { name: 'Dashboard', path: '/educator', icon: assets.home_icon },
     { name: 'Add Course', path: '/educator/add-course', icon: assets.add_icon },
     { name: 'My Courses', path: '/educator/my-courses', icon: assets.my_course_icon },
+    { name: 'Manage Courses', path: '/educator/manage-courses', icon: assets.managec },
     { name: 'Student Enrolled', path: '/educator/student-enrolled', icon: assets.person_tick_icon },
     { name: 'Student Questions', path: '/educator/student-questions', icon: assets.message },
     { name: 'Manage Quiz', path: '/educator/manage-quiz', icon: assets.quizz },

@@ -21,5 +21,21 @@ educatorRouter.get('/dashboard', protectEducator, educatorDashboardData)
 // Get Educator Students Data
 educatorRouter.get('/enrolled-students', protectEducator, getEnrolledStudentsData)
 
+// Update Existing Course (Edit details, chapters, thumbnail)
+educatorRouter.put(
+  "/update-course/:courseId",
+  upload.single("image"),
+  protectEducator,
+  updateCourse
+);
+
+// Toggle Course Visibility (Publish/Unpublish)
+educatorRouter.patch(
+  "/toggle-visibility/:courseId",
+  protectEducator,
+  toggleCourseVisibility
+);
+
+
 
 export default educatorRouter;

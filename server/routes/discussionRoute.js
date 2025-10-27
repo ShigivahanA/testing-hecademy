@@ -6,11 +6,13 @@ import {
   updateDiscussionStatus,
   getAllCourseQuestions,
 } from "../controllers/discussionController.js";
+import { protectEducator } from "../middlewares/authMiddleware.js";
+
 
 const discussionRouter = express.Router();
 
 // ✅ Move educator route first — to avoid being overridden
-discussionRouter.get("/educator/all", getAllCourseQuestions);
+discussionRouter.get("/educator/all",protectEducator, getAllCourseQuestions);
 
 // Student + Educator shared routes
 discussionRouter.get("/:courseId/:lectureId", getDiscussions); // lecture-level

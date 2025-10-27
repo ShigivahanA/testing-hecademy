@@ -16,6 +16,7 @@ const SideBar = () => {
     { name: 'Student Questions', path: '/educator/student-questions', icon: assets.message },
     { name: 'Manage Quiz', path: '/educator/manage-quiz', icon: assets.quizz },
     { name: 'Manage Feedback', path: '/educator/manage-feedback', icon: assets.feedback },
+    { name: 'Feedback Analysis', path: '/educator/feedback-analysis', icon: assets.feedback },
   ];
 
   return isEducator && (

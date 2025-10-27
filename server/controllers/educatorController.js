@@ -3,6 +3,9 @@ import Course from '../models/Course.js';
 import { Purchase } from '../models/Purchase.js';
 import User from '../models/User.js';
 import { clerkClient } from '@clerk/express'
+import Sentiment from "sentiment";
+
+const sentiment = new Sentiment();
 
 // update role to educator
 export const updateRoleToEducator = async (req, res) => {
@@ -217,5 +220,58 @@ export const toggleCourseVisibility = async (req, res) => {
     });
   } catch (error) {
     res.json({ success: false, message: error.message });
+  }
+};
+
+export const analyzeFeedbackSentiment = async (req, res) => {
+  try {
+    const educatorId = req.auth.userId;
+
+    // Find educator's courses
+    const courses = await Course.find({ educator: educatorId })
+      .select("courseTitle courseRatings")
+      .lean();
+
+    if (!courses.length) {
+      return res.json({ success: true, sentimentStats: [] });
+    }
+
+    // Process each course’s feedback
+    const sentimentStats = courses.map(course => {
+      let total = 0,
+        count = 0,
+        positive = 0,
+        neutral = 0,
+        negative = 0;
+
+      course.courseRatings.forEach(r => {
+        if (r.feedback && r.feedback.trim()) {
+          const result = sentiment.analyze(r.feedback);
+          total += result.score;
+          count++;
+
+          if (result.score > 1) positive++;
+          else if (result.score < -1) negative++;
+          else neutral++;
+        }
+      });
+
+      const avg = count ? total / count : 0;
+
+      return {
+        courseTitle: course.courseTitle,
+        positive,
+        neutral,
+        negative,
+        avgSentiment: avg,
+        satisfaction:
+          avg > 1 ? "Positive" : avg < -1 ? "Negative" : "Neutral",
+      };
+    });
+
+    res.json({ success: true, sentimentStats });
+  } catch (error) {
+    console.error("Error analyzing sentiment:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

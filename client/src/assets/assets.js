@@ -40,6 +40,7 @@ import message from './message.svg'
 import quizz from './quizz.svg'
 import feedback from './feedback.png'
 import managec from './managec.svg'
+import sentimentanalysis from './sentimentanalysis.png'
 
 
 export const assets = {
@@ -47,6 +48,7 @@ export const assets = {
     message,
     quizz,
     search_icon,
+    sentimentanalysis,
     sketch,
     feedback,
     managec,

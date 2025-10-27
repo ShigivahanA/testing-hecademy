@@ -16,9 +16,12 @@ const SentimentChart = () => {
     try {
       setLoading(true);
       const token = await getToken();
-      const res = await axios.get(`${backendUrl}/api/educator/feedback-sentiment`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(
+        `${backendUrl}/api/educator/feedback-sentiment`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (res.data.success) setData(res.data.sentimentStats);
       else toast.error("Failed to load sentiment data");
@@ -41,14 +44,17 @@ const SentimentChart = () => {
     );
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md mt-4">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">
-        Student Satisfaction Overview
+    <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md mt-4 w-full max-w-7xl mx-auto">
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4 text-center md:text-left">
+        Students Satisfaction Overview
       </h2>
+
       {data.length === 0 ? (
-        <p className="text-gray-500 text-sm">No feedback available yet.</p>
+        <p className="text-gray-500 text-center sm:text-left text-sm">
+          No feedback available yet.
+        </p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {data.map((course, i) => {
             const chartData = [
               { name: "Positive", value: course.positive },
@@ -56,32 +62,67 @@ const SentimentChart = () => {
               { name: "Negative", value: course.negative },
             ];
 
+            const total =
+              course.positive + course.neutral + course.negative || 1;
+
             return (
-              <div key={i} className="border rounded p-4 bg-gray-50">
-                <h3 className="font-medium text-gray-800 mb-3">
+              <div
+                key={i}
+                className="border rounded-xl p-4 sm:p-5 bg-gray-50 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col items-center justify-between"
+              >
+                <h3 className="font-medium text-gray-800 mb-3 text-center text-base sm:text-lg">
                   {course.courseTitle}
                 </h3>
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie
-                      data={chartData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={70}
-                      dataKey="value"
-                      label={({ name, percent }) =>
-                        `${name} ${(percent * 100).toFixed(0)}%`
-                      }
+
+                {/* Chart */}
+                <div className="w-full flex justify-center items-center mb-3">
+                  <div className="w-[220px] h-[220px] sm:w-[250px] sm:h-[250px] md:w-[270px] md:h-[270px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={chartData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius="80%"
+                          dataKey="value"
+                        >
+                          {chartData.map((_, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Legend (Below Chart) */}
+                <div className="flex flex-wrap justify-center gap-3 mb-3 text-sm sm:text-base">
+                  {chartData.map((entry, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-1"
                     >
-                      {chartData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <p className="text-center text-sm text-gray-600 mt-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: COLORS[idx] }}
+                      />
+                      <span className="text-gray-700">
+                        {entry.name}{" "}
+                        <span className="font-semibold text-gray-900">
+                          {((entry.value / total) * 100).toFixed(0)}%
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Avg Sentiment */}
+                <p className="text-center text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
                   Avg Sentiment:{" "}
                   <span
                     className={`font-semibold ${

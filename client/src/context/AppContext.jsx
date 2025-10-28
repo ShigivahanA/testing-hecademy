@@ -175,7 +175,8 @@ const fetchUserData = async () => {
   if (userData && !isEducator) {
     fetchRecommendations();
   }
-}, [userData, isEducator]);
+}, [userData?.preferences, isEducator]);
+
 
 
 const fetchRecommendations = async () => {

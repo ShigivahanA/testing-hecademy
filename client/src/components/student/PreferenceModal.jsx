@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import { assets } from "../../assets/assets";
 
 const PreferenceModal = ({ onClose }) => {
-  const { backendUrl, getToken, setUserData, userData } = useContext(AppContext);
+  const { backendUrl, getToken, setUserData, userData,fetchUserData, fetchRecommendations } = useContext(AppContext);
 
   const [topics, setTopics] = useState([]);
   const [difficulty, setDifficulty] = useState("");
@@ -28,26 +28,36 @@ const PreferenceModal = ({ onClose }) => {
     userData?.preferences?.difficulty ||
     userData?.preferences?.goals?.length > 0;
 
-  const savePreferences = async () => {
-    try {
-      const token = await getToken();
-      const { data } = await axios.put(
-        `${backendUrl}/api/user/preferences`,
-        { topics, difficulty, goals },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+ const savePreferences = async () => {
+  try {
+    const token = await getToken();
+    const { data } = await axios.put(
+      `${backendUrl}/api/user/preferences`,
+      { topics, difficulty, goals },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-      if (data.success) {
-        toast.success(isUpdating ? "Preferences updated!" : "Preferences saved!");
-        setUserData(data.user);
-        onClose();
-      } else {
-        toast.error(data.message);
-      }
-    } catch (err) {
-      toast.error(err.message);
+    if (data.success) {
+      toast.success(isUpdating ? "Preferences updated!" : "Preferences saved!");
+
+      // 🧠 Step 1: Update context data immediately
+      setUserData(data.user);
+
+      // 🧠 Step 2: Refetch updated user data (from backend)
+      await fetchUserData();
+
+      // 🧠 Step 3: Trigger new recommendations
+      await fetchRecommendations();
+
+      onClose();
+    } else {
+      toast.error(data.message);
     }
-  };
+  } catch (err) {
+    toast.error("Error saving preferences: " + err.message);
+  }
+};
+
 
   // 🧩 Handle Add Item
   const handleAdd = (value, list, setList) => {

@@ -22,6 +22,7 @@ export const getRecommendations = async (req, res) => {
   try {
     const userId = req.auth.userId;
     const userDoc = await User.findById(userId).populate("enrolledCourses");
+    console.log("🧠 User preferences at recommend time:", userDoc.preferences);
 
     if (!userDoc)
       return res.status(404).json({ success: false, message: "User not found" });

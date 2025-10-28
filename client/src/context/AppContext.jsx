@@ -12,6 +12,7 @@ export const AppContext = createContext()
 export const AppContextProvider = (props) => {
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL
+    const pybackendUrl = import.meta.env.VITE_PYBACKEND_URL
     const currency = import.meta.env.VITE_CURRENCY
 
     const navigate = useNavigate()
@@ -21,6 +22,7 @@ export const AppContextProvider = (props) => {
     const [showLogin, setShowLogin] = useState(false)
     const [recommendations, setRecommendations] = useState([]);
     const [loadingUser, setLoadingUser] = useState(true);
+    const [loadingRecommendations, setLoadingRecommendations] = useState(false); // ✅ Added missing state
     const [isEducator,setIsEducator] = useState(false)
     const [allCourses, setAllCourses] = useState([])
     const [userData, setUserData] = useState(null)
@@ -170,21 +172,37 @@ const fetchUserData = async () => {
     setLoadingUser(false); 
         }
     }, [user])
+    useEffect(() => {
+  if (userData && !isEducator) {
+    fetchRecommendations();
+  }
+}, [userData, isEducator]);
+
 
 const fetchRecommendations = async () => {
   try {
-    const token = await getToken()
-    const { data } = await axios.get(
-      backendUrl + "/api/recommendations/user",  
+    setLoadingRecommendations(true);
+    const token = await getToken();
+    if (!token) return;
+
+    const { data } = await axios.post(
+      backendUrl + "/api/recommend/user",
+      {},
       { headers: { Authorization: `Bearer ${token}` } }
-    )
-    if (data.success) {
-      setRecommendations(data.recommended)
+    );
+
+    if (data.success && data.recommended?.length > 0) {
+      setRecommendations(data.recommended);
+    } else {
+      setRecommendations([]);
     }
   } catch (error) {
-    toast.error(error.message)
+    toast.error("Recommendation error: " + error.message);
+  } finally {
+    setLoadingRecommendations(false);
   }
-}
+};
+
 const fetchCertificates = async () => {
   try {
     const token = await getToken();
@@ -306,7 +324,7 @@ const fetchLeaderboard = async () => {
         calculateRating, calculateNoOfLectures,
         isEducator,setIsEducator, recommendations, 
         fetchRecommendations ,certificates, fetchCertificates, 
-        generateCertificateForCourse, loadingUser, updateUserCourseProgress, fetchLeaderboard
+        generateCertificateForCourse, loadingUser, updateUserCourseProgress, fetchLeaderboard,loadingRecommendations,
     }
 
 

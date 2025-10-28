@@ -9,11 +9,11 @@ import Loading from '../../components/student/Loading'
 
 const CoursesList = () => {
   const { input } = useParams()
-  const { allCourses, navigate, backendUrl, userData, recommendations, fetchRecommendations, isEducator } = useContext(AppContext)
+  const { allCourses, navigate, backendUrl,loadingRecommendations , userData, recommendations, fetchRecommendations, isEducator } = useContext(AppContext)
 
   const [filteredCourse, setFilteredCourse] = useState([])
-  const [recommended, setRecommended] = useState([])
-  const [loading, setLoading] = useState(true) // 👈 added loading state
+  const [loading, setLoading] = useState(true); // for course list loader
+
 
   // ✅ Filter course list based on search input
   useEffect(() => {
@@ -37,10 +37,10 @@ const CoursesList = () => {
   }, [allCourses, input])
 
   useEffect(() => {
-    if (fetchRecommendations) {
-      fetchRecommendations()
-    }
-  }, [fetchRecommendations])
+  if (userData && !isEducator) {
+    fetchRecommendations();
+  }
+}, [userData, isEducator]);
 
   if (loading) {
     return <Loading /> // 👈 show loading first
@@ -76,27 +76,27 @@ const CoursesList = () => {
           </div>
         )}
         {/* ✅ Recommendations Only if User is Logged In */}
-        {userData && !isEducator ? (
-          recommendations && (
-            <div className="my-16">
-              <h2 className="text-2xl font-semibold mb-6 text-gray-800">
-                Recommended for You
-              </h2>
+        {userData && !isEducator && (
+  <div className="my-16">
+    <h2 className="text-2xl font-semibold mb-6 text-gray-800">
+      Recommended for You
+    </h2>
 
-              {recommendations.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-2 md:p-0">
-                  {recommendations.map((course, index) => (
-                    <CourseCard key={course._id || index} course={course} />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-lg">
-                  No recommended courses based on your interests. Please explore our course list.
-                </p>
-              )}
-            </div>
-          )
-        ) : null}
+    {loadingRecommendations ? (
+      <Loading /> // ⏳ Show loading while fetching recommendations
+    ) : recommendations && recommendations.length > 0 ? (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-2 md:p-0">
+        {recommendations.map((course, index) => (
+          <CourseCard key={course._id || index} course={course} />
+        ))}
+      </div>
+    ) : (
+      <p className="text-gray-500 text-lg">
+        No recommended courses based on your interests. Please explore our course list.
+      </p>
+    )}
+  </div>
+)}
 
         {/* ✅ Normal Course List */}
         <div className="my-16">

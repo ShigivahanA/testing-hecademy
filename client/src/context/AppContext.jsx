@@ -186,7 +186,7 @@ const fetchRecommendations = async () => {
     if (!token) return;
 
     const { data } = await axios.post(
-      backendUrl + "/api/recommend/user",
+      backendUrl + "/api/recommendations/user",
       {},
       { headers: { Authorization: `Bearer ${token}` } }
     );

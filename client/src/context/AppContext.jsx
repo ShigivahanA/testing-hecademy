@@ -134,17 +134,16 @@ const fetchUserData = async () => {
     }
 
     const calculateRating = (course) => {
+  const ratings = Array.isArray(course.courseRatings)
+    ? course.courseRatings
+    : [];
 
-        if (course.courseRatings.length === 0) {
-            return 0
-        }
+  if (ratings.length === 0) return 0;
 
-        let totalRating = 0
-        course.courseRatings.forEach(rating => {
-            totalRating += rating.rating
-        })
-        return Math.floor(totalRating / course.courseRatings.length)
-    }
+  const totalRating = ratings.reduce((sum, r) => sum + (r.rating || 0), 0);
+  return Math.round(totalRating / ratings.length);
+};
+
 
     const calculateNoOfLectures = (course) => {
         let totalLectures = 0;

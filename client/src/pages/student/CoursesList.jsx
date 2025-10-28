@@ -87,7 +87,7 @@ const CoursesList = () => {
     ) : recommendations && recommendations.length > 0 ? (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-2 md:p-0">
         {recommendations.map((course, index) => (
-          <CourseCard key={course._id || index} course={course} />
+          <CourseCard key={String(course._id || index)} course={course} />
         ))}
       </div>
     ) : (

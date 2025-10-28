@@ -20,16 +20,46 @@ export const getRecommendations = async (req, res) => {
   try {
     const userId = req.auth.userId;
     const userDoc = await User.findById(userId).populate("enrolledCourses");
+
     if (!userDoc)
       return res.status(404).json({ success: false, message: "User not found" });
 
-    const user = cleanMongoObject(userDoc.toObject());
+    let user = cleanMongoObject(userDoc.toObject());
     const allCourses = await Course.find({ isPublished: true });
-    const courses = allCourses.map(c => cleanMongoObject(c.toObject()));
+    const courses = allCourses.map((c) => cleanMongoObject(c.toObject()));
 
-    console.log("🌐 Sending request to:", `${PYTHON_API}/recommend`);
-    console.log("📦 Courses:", courses.length, " | User:", user._id);
+    // 🧩 Auto-fill missing preferences for better personalization
+    if (
+      !user.preferences ||
+      (!user.preferences.topics?.length && !user.preferences.goals?.length)
+    ) {
+      const topicPool = [];
+      user.enrolledCourses.forEach((course) => {
+        if (course.courseTags?.length)
+          topicPool.push(...course.courseTags.slice(0, 3));
+      });
 
+      user.preferences = {
+        topics: [...new Set(topicPool)].slice(0, 3),
+        goals: ["skill improvement"],
+        difficulty: user.preferences?.difficulty || "intermediate",
+      };
+    }
+
+    // 🧠 Add some fallback logs if empty
+    if (!user.activityLog?.length && user.enrolledCourses?.length) {
+      user.activityLog = user.enrolledCourses.map((course) => ({
+        action: "watched",
+        courseId: course._id,
+        details: {},
+        timestamp: new Date(),
+      }));
+    }
+
+    console.log("👤 User prefs:", user.preferences);
+    console.log("📚 Activity count:", user.activityLog?.length);
+
+    // 🔗 Send data to Python recommender
     const { data } = await axios.post(
       `${PYTHON_API}/recommend`,
       { user, courses },

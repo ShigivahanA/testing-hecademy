@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useRef } from "react";
 import axios from "axios";
 import { AppContext } from "../../context/AppContext";
 import { toast } from "react-toastify";
@@ -11,26 +11,28 @@ const PreferenceModal = ({ onClose }) => {
   const [difficulty, setDifficulty] = useState("");
   const [goals, setGoals] = useState([]);
 
-  // ✅ Pre-fill with existing preferences
+  const initialized = useRef(false); // 🧠 Prevent overwriting after first load
+
+  // ✅ Only pre-fill once on mount
   useEffect(() => {
-    if (userData?.preferences) {
+    if (userData?.preferences && !initialized.current) {
       setTopics(userData.preferences.topics || []);
       setDifficulty(userData.preferences.difficulty || "");
       setGoals(userData.preferences.goals || []);
+      initialized.current = true; // prevents future overwrites
     }
   }, [userData]);
 
-  // ✅ Check if updating
   const isUpdating =
-    (userData?.preferences?.topics?.length > 0 ||
-      userData?.preferences?.difficulty ||
-      userData?.preferences?.goals?.length > 0);
+    userData?.preferences?.topics?.length > 0 ||
+    userData?.preferences?.difficulty ||
+    userData?.preferences?.goals?.length > 0;
 
   const savePreferences = async () => {
     try {
       const token = await getToken();
       const { data } = await axios.put(
-        backendUrl + "/api/user/preferences",
+        `${backendUrl}/api/user/preferences`,
         { topics, difficulty, goals },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -47,27 +49,34 @@ const PreferenceModal = ({ onClose }) => {
     }
   };
 
+  // 🧩 Handle Add Item
+  const handleAdd = (value, list, setList) => {
+    if (value && !list.includes(value)) {
+      setList([...list, value]);
+    }
+  };
+
+  // 🧩 Handle Remove Item
+  const handleRemove = (value, setList) => {
+    setList((prev) => prev.filter((item) => item !== value));
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50 px-4 ">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50 px-4">
       <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl w-full max-w-md md:max-w-lg text-left relative overflow-hidden p-5 md:p-6 rounded-b-xl">
-        
         {/* Header */}
         <h2 className="text-lg md:text-xl font-semibold text-white px-6 py-4 text-center">
           {isUpdating ? "Update Your Learning Preferences" : "Set Your Learning Preferences"}
         </h2>
 
         {/* Topics */}
-        <label className="text-white block mb-2 text-sm font-medium text-gray-700">
-          Topics
-        </label>
+        <label className="text-white block mb-2 text-sm font-medium">Topics</label>
         <select
+          defaultValue=""
           className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-black mb-2 text-sm md:text-base"
           onChange={(e) => {
-            const value = e.target.value;
-            if (value && !topics.includes(value)) {
-              setTopics([...topics, value]);
-            }
-            e.target.value = ""; // reset after selection
+            handleAdd(e.target.value, topics, setTopics);
+            e.target.value = ""; // reset
           }}
         >
           <option value="">Select a topic...</option>
@@ -87,8 +96,9 @@ const PreferenceModal = ({ onClose }) => {
               >
                 <span className="mr-2">{topic}</span>
                 <button
+                  type="button"
                   className="text-cyan-600 hover:text-red-500 font-bold"
-                  onClick={() => setTopics(topics.filter((t) => t !== topic))}
+                  onClick={() => handleRemove(topic, setTopics)}
                 >
                   ×
                 </button>
@@ -98,9 +108,7 @@ const PreferenceModal = ({ onClose }) => {
         )}
 
         {/* Difficulty */}
-        <label className="text-white block mt-4 mb-2 text-sm font-medium text-gray-700">
-          Difficulty
-        </label>
+        <label className="text-white block mt-4 mb-2 text-sm font-medium">Difficulty</label>
         <select
           value={difficulty}
           className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-black mb-2 text-sm md:text-base"
@@ -113,17 +121,13 @@ const PreferenceModal = ({ onClose }) => {
         </select>
 
         {/* Goals */}
-        <label className="text-white block mt-4 mb-2 text-sm font-medium text-gray-700">
-          Goals
-        </label>
+        <label className="text-white block mt-4 mb-2 text-sm font-medium">Goals</label>
         <select
+          defaultValue=""
           className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-black mb-2 text-sm md:text-base"
           onChange={(e) => {
-            const value = e.target.value;
-            if (value && !goals.includes(value)) {
-              setGoals([...goals, value]);
-            }
-            e.target.value = ""; // reset after selection
+            handleAdd(e.target.value, goals, setGoals);
+            e.target.value = ""; // reset
           }}
         >
           <option value="">Select a goal...</option>
@@ -143,8 +147,9 @@ const PreferenceModal = ({ onClose }) => {
               >
                 <span className="mr-2">{goal}</span>
                 <button
+                  type="button"
                   className="text-cyan-600 hover:text-red-500 font-bold"
-                  onClick={() => setGoals(goals.filter((g) => g !== goal))}
+                  onClick={() => handleRemove(goal, setGoals)}
                 >
                   ×
                 </button>

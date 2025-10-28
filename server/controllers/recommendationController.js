@@ -21,7 +21,7 @@ export const getRecommendations = async (req, res) => {
   try {
     const userId = req.auth.userId;
 
-    // ⚡ Force fresh DB read (no stale Mongoose cache)
+    // ⚡ Always fetch the latest user snapshot
     const userDoc = await User.findOne({ _id: userId })
       .populate("enrolledCourses")
       .lean();
@@ -32,25 +32,32 @@ export const getRecommendations = async (req, res) => {
     console.log("🧠 Live User Preferences (fresh from DB):", userDoc.preferences);
     console.log("👤 Enrolled Courses:", userDoc.enrolledCourses?.length || 0);
 
-    // 🧩 Prepare user and course data
+    // 🧩 Prepare user & course data
     const user = cleanMongoObject(userDoc);
     const allCourses = await Course.find({ isPublished: true }).lean();
     const courses = allCourses.map((c) => cleanMongoObject(c));
 
-    /* ✅ Normalize enrolledCourses */
     const enrolledCoursesArray = Array.isArray(user.enrolledCourses)
       ? user.enrolledCourses
       : user.enrolledCourses
       ? Object.values(user.enrolledCourses)
       : [];
 
-    /* 🧠 Preserve user preferences and only fill missing parts */
+    // ✅ --- Preserve preferences properly ---
+    const hasValidTopics =
+      Array.isArray(user.preferences?.topics) &&
+      user.preferences.topics.length > 0;
+    const hasValidGoals =
+      Array.isArray(user.preferences?.goals) &&
+      user.preferences.goals.length > 0;
+    const hasDifficulty =
+      typeof user.preferences?.difficulty === "string" &&
+      user.preferences.difficulty.trim() !== "";
+
+    // Only fill missing ones
     if (!user.preferences) user.preferences = {};
 
-    if (
-      !Array.isArray(user.preferences.topics) ||
-      user.preferences.topics.length === 0
-    ) {
+    if (!hasValidTopics) {
       const topicPool = [];
       enrolledCoursesArray.forEach((course) => {
         if (course.courseTags?.length) topicPool.push(...course.courseTags);
@@ -62,18 +69,15 @@ export const getRecommendations = async (req, res) => {
       ].slice(0, 5);
     }
 
-    if (
-      !Array.isArray(user.preferences.goals) ||
-      user.preferences.goals.length === 0
-    ) {
+    if (!hasValidGoals) {
       user.preferences.goals = ["skill improvement", "career growth"];
     }
 
-    if (!user.preferences.difficulty) {
+    if (!hasDifficulty) {
       user.preferences.difficulty = "intermediate";
     }
 
-    /* 🧩 Add fallback activity logs if user is new */
+    // 🧩 Add fallback activity logs for new users
     if (!user.activityLog?.length && enrolledCoursesArray?.length) {
       user.activityLog = enrolledCoursesArray.map((course) => ({
         action: "watched",
@@ -83,18 +87,16 @@ export const getRecommendations = async (req, res) => {
       }));
     }
 
-    // 🧠 Debug summary before sending
     console.log("🧩 Final Preferences Sent to Python:", user.preferences);
     console.log("📚 Activity Count:", user.activityLog?.length || 0);
 
-    // 🚀 Send data to Python recommender
+    // 🚀 Send to Python recommender
     const { data } = await axios.post(
       `${PYTHON_API}/recommend`,
       { user, courses },
       { timeout: 10000 }
     );
 
-    // 📥 Log response summary
     console.log(
       "📥 Recommender Response:",
       data?.success ? "✅ Success" : "❌ Fail",
@@ -103,13 +105,11 @@ export const getRecommendations = async (req, res) => {
       "courses"
     );
 
-    /* ✅ Success */
     if (data.success && data.recommended?.length > 0) {
       return res.json({ success: true, recommended: data.recommended });
     }
 
-    /* ⚠️ Fallback: top-rated or latest courses */
-    console.warn("⚠️ No personalized matches — returning fallback results.");
+    console.warn("⚠️ No personalized matches — returning fallback.");
     const fallback = await Course.find({ isPublished: true })
       .sort({ rating: -1, createdAt: -1 })
       .limit(5)
@@ -118,14 +118,17 @@ export const getRecommendations = async (req, res) => {
     return res.json({
       success: true,
       recommended: fallback,
-      message: "No personalized matches found. Showing popular courses instead.",
+      message:
+        "No personalized matches found. Showing popular courses instead.",
     });
   } catch (err) {
     console.error("❌ Recommendation error:", err.message);
+
     const fallback = await Course.find({ isPublished: true })
       .sort({ rating: -1, createdAt: -1 })
       .limit(5)
       .lean();
+
     return res.json({
       success: false,
       recommended: fallback,

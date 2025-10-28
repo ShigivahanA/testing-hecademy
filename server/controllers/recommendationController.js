@@ -4,7 +4,7 @@ import Course from "../models/Course.js";
 
 const PYTHON_API = process.env.RECOMMENDER_API_URL || "http://127.0.0.1:5001";
 
-// 🧹 Helper — recursively clean Mongo ObjectIDs / numeric wrappers
+/* 🧹 Helper — recursively clean Mongo ObjectIDs / numeric wrappers */
 function cleanMongoObject(obj) {
   if (!obj || typeof obj !== "object") return obj;
   if (obj.$oid) return obj.$oid;
@@ -12,7 +12,6 @@ function cleanMongoObject(obj) {
   if (obj.$numberLong) return parseInt(obj.$numberLong);
   if (obj.$date && obj.$date.$numberLong)
     return new Date(parseInt(obj.$date.$numberLong));
-
   const cleaned = {};
   for (const key in obj) cleaned[key] = cleanMongoObject(obj[key]);
   return cleaned;
@@ -21,53 +20,60 @@ function cleanMongoObject(obj) {
 export const getRecommendations = async (req, res) => {
   try {
     const userId = req.auth.userId;
-    const userDoc = await User.findById(userId).populate("enrolledCourses");
-    console.log("🧠 User preferences at recommend time:", userDoc.preferences);
+
+    // ⚡ Force fresh DB read (no stale Mongoose cache)
+    const userDoc = await User.findOne({ _id: userId })
+      .populate("enrolledCourses")
+      .lean();
 
     if (!userDoc)
       return res.status(404).json({ success: false, message: "User not found" });
 
-    // 🧩 Prepare user + courses data
-    let user = cleanMongoObject(userDoc.toObject());
-    const allCourses = await Course.find({ isPublished: true });
-    const courses = allCourses.map((c) => cleanMongoObject(c.toObject()));
+    console.log("🧠 Live User Preferences (fresh from DB):", userDoc.preferences);
+    console.log("👤 Enrolled Courses:", userDoc.enrolledCourses?.length || 0);
 
-    // ✅ Normalize enrolledCourses safely
-    let enrolledCoursesArray = [];
-    if (Array.isArray(user.enrolledCourses)) {
-      enrolledCoursesArray = user.enrolledCourses;
-    } else if (user.enrolledCourses && typeof user.enrolledCourses === "object") {
-      enrolledCoursesArray = Object.values(user.enrolledCourses);
-    } else {
-      enrolledCoursesArray = [];
-    }
+    // 🧩 Prepare user and course data
+    const user = cleanMongoObject(userDoc);
+    const allCourses = await Course.find({ isPublished: true }).lean();
+    const courses = allCourses.map((c) => cleanMongoObject(c));
 
-    console.log("👤 Enrolled Courses Count:", enrolledCoursesArray.length);
+    /* ✅ Normalize enrolledCourses */
+    const enrolledCoursesArray = Array.isArray(user.enrolledCourses)
+      ? user.enrolledCourses
+      : user.enrolledCourses
+      ? Object.values(user.enrolledCourses)
+      : [];
 
-    // 🧠 Auto-fill missing preferences from user data
+    /* 🧠 Preserve user preferences and only fill missing parts */
+    if (!user.preferences) user.preferences = {};
+
     if (
-      !user.preferences ||
-      (!user.preferences.topics?.length && !user.preferences.goals?.length)
+      !Array.isArray(user.preferences.topics) ||
+      user.preferences.topics.length === 0
     ) {
       const topicPool = [];
-
       enrolledCoursesArray.forEach((course) => {
-        if (course.courseTags?.length) {
-          topicPool.push(...course.courseTags);
-        } else if (course.courseTitle) {
-          // fallback: extract keywords from title
+        if (course.courseTags?.length) topicPool.push(...course.courseTags);
+        else if (course.courseTitle)
           topicPool.push(...course.courseTitle.split(" "));
-        }
       });
-
-      user.preferences = {
-        topics: [...new Set(topicPool.map((t) => t.toLowerCase()))].slice(0, 5),
-        goals: ["skill improvement", "career growth"],
-        difficulty: user.preferences?.difficulty || "intermediate",
-      };
+      user.preferences.topics = [
+        ...new Set(topicPool.map((t) => t.toLowerCase())),
+      ].slice(0, 5);
     }
 
-    // 🧩 Ensure some activity data exists
+    if (
+      !Array.isArray(user.preferences.goals) ||
+      user.preferences.goals.length === 0
+    ) {
+      user.preferences.goals = ["skill improvement", "career growth"];
+    }
+
+    if (!user.preferences.difficulty) {
+      user.preferences.difficulty = "intermediate";
+    }
+
+    /* 🧩 Add fallback activity logs if user is new */
     if (!user.activityLog?.length && enrolledCoursesArray?.length) {
       user.activityLog = enrolledCoursesArray.map((course) => ({
         action: "watched",
@@ -77,27 +83,37 @@ export const getRecommendations = async (req, res) => {
       }));
     }
 
-    console.log("🧠 Preferences:", user.preferences);
-    console.log("📚 Activity Count:", user.activityLog?.length);
+    // 🧠 Debug summary before sending
+    console.log("🧩 Final Preferences Sent to Python:", user.preferences);
+    console.log("📚 Activity Count:", user.activityLog?.length || 0);
 
-    // 🚀 Send to Python recommender
+    // 🚀 Send data to Python recommender
     const { data } = await axios.post(
       `${PYTHON_API}/recommend`,
       { user, courses },
       { timeout: 10000 }
     );
 
-    console.log("📥 Recommender Response:", data?.recommended?.length || 0, "items");
+    // 📥 Log response summary
+    console.log(
+      "📥 Recommender Response:",
+      data?.success ? "✅ Success" : "❌ Fail",
+      "| Returned:",
+      data?.recommended?.length || 0,
+      "courses"
+    );
 
+    /* ✅ Success */
     if (data.success && data.recommended?.length > 0) {
       return res.json({ success: true, recommended: data.recommended });
     }
 
-    // 🔁 Fallback: top-rated or latest courses
-    console.warn("⚠️ No personalized matches — returning fallback.");
+    /* ⚠️ Fallback: top-rated or latest courses */
+    console.warn("⚠️ No personalized matches — returning fallback results.");
     const fallback = await Course.find({ isPublished: true })
       .sort({ rating: -1, createdAt: -1 })
-      .limit(5);
+      .limit(5)
+      .lean();
 
     return res.json({
       success: true,
@@ -108,8 +124,8 @@ export const getRecommendations = async (req, res) => {
     console.error("❌ Recommendation error:", err.message);
     const fallback = await Course.find({ isPublished: true })
       .sort({ rating: -1, createdAt: -1 })
-      .limit(5);
-
+      .limit(5)
+      .lean();
     return res.json({
       success: false,
       recommended: fallback,

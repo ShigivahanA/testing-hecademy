@@ -21,7 +21,7 @@ export const getRecommendations = async (req, res) => {
   try {
     const userId = req.auth.userId;
 
-    // ⚡ Always fetch the latest user snapshot
+    // ⚡ Always get fresh user data with courses
     const userDoc = await User.findOne({ _id: userId })
       .populate("enrolledCourses")
       .lean();
@@ -32,7 +32,18 @@ export const getRecommendations = async (req, res) => {
     console.log("🧠 Live User Preferences (fresh from DB):", userDoc.preferences);
     console.log("👤 Enrolled Courses:", userDoc.enrolledCourses?.length || 0);
 
-    // 🧩 Prepare user & course data
+    // 🧩 Preserve preferences BEFORE cleaning
+    const preservedPreferences = {
+      topics: Array.isArray(userDoc.preferences?.topics)
+        ? [...userDoc.preferences.topics]
+        : [],
+      goals: Array.isArray(userDoc.preferences?.goals)
+        ? [...userDoc.preferences.goals]
+        : [],
+      difficulty: userDoc.preferences?.difficulty || "",
+    };
+
+    // 🔧 Clean MongoDB formatting
     const user = cleanMongoObject(userDoc);
     const allCourses = await Course.find({ isPublished: true }).lean();
     const courses = allCourses.map((c) => cleanMongoObject(c));
@@ -43,37 +54,25 @@ export const getRecommendations = async (req, res) => {
       ? Object.values(user.enrolledCourses)
       : [];
 
-    // ✅ --- Preserve preferences properly ---
-    const hasValidTopics =
-      Array.isArray(user.preferences?.topics) &&
-      user.preferences.topics.length > 0;
-    const hasValidGoals =
-      Array.isArray(user.preferences?.goals) &&
-      user.preferences.goals.length > 0;
-    const hasDifficulty =
-      typeof user.preferences?.difficulty === "string" &&
-      user.preferences.difficulty.trim() !== "";
+    // ✅ Restore preserved preferences (if valid)
+    user.preferences = { ...preservedPreferences };
 
-    // Only fill missing ones
-    if (!user.preferences) user.preferences = {};
-
-    if (!hasValidTopics) {
+    // ✅ Only fill missing values if empty
+    if (!Array.isArray(user.preferences.topics) || user.preferences.topics.length === 0) {
       const topicPool = [];
       enrolledCoursesArray.forEach((course) => {
         if (course.courseTags?.length) topicPool.push(...course.courseTags);
         else if (course.courseTitle)
           topicPool.push(...course.courseTitle.split(" "));
       });
-      user.preferences.topics = [
-        ...new Set(topicPool.map((t) => t.toLowerCase())),
-      ].slice(0, 5);
+      user.preferences.topics = [...new Set(topicPool.map((t) => t.toLowerCase()))].slice(0, 5);
     }
 
-    if (!hasValidGoals) {
+    if (!Array.isArray(user.preferences.goals) || user.preferences.goals.length === 0) {
       user.preferences.goals = ["skill improvement", "career growth"];
     }
 
-    if (!hasDifficulty) {
+    if (!user.preferences.difficulty) {
       user.preferences.difficulty = "intermediate";
     }
 
@@ -87,6 +86,7 @@ export const getRecommendations = async (req, res) => {
       }));
     }
 
+    // 🔍 Deep log before Python call
     console.log("🧩 Final Preferences Sent to Python:", user.preferences);
     console.log("📚 Activity Count:", user.activityLog?.length || 0);
 
@@ -123,7 +123,6 @@ export const getRecommendations = async (req, res) => {
     });
   } catch (err) {
     console.error("❌ Recommendation error:", err.message);
-
     const fallback = await Course.find({ isPublished: true })
       .sort({ rating: -1, createdAt: -1 })
       .limit(5)

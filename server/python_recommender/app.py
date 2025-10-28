@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from typing import Optional
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 import pandas as pd
 import uvicorn
@@ -19,6 +20,14 @@ app = FastAPI(
     title="Hecademy Hybrid Recommender API",
     description="Combines content-based, collaborative, and difficulty-weighted filtering.",
     version="1.3.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or restrict later to your backend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Optional API key (set this in your environment if needed)

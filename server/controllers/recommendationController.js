@@ -173,9 +173,14 @@ export const getRecommendations = async (req, res) => {
         .map((course, i) => {
   let cleanId = course._id;
 
-  try {
-    // 🧹 Normalize nested IDs (only if needed)
-    if (typeof cleanId === "object" && cleanId !== null) {
+    try {
+    // ✅ Case 1: if it's already a valid string — keep it.
+    if (typeof cleanId === "string" && cleanId.trim().length >= 12) {
+      cleanId = cleanId.trim();
+    }
+
+    // ✅ Case 2: handle object-based or buffer IDs.
+    else if (typeof cleanId === "object" && cleanId !== null) {
       if (cleanId.$oid) cleanId = cleanId.$oid;
       else if (cleanId._id?.$oid) cleanId = cleanId._id.$oid;
       else if (cleanId.buffer?.data)
@@ -184,12 +189,10 @@ export const getRecommendations = async (req, res) => {
       else cleanId = "";
     }
 
-    // ✅ Only process if not already string
-    if (typeof cleanId !== "string") {
-      cleanId = String(cleanId || "").trim();
-    }
+    // ✅ Ensure it's a string now
+    cleanId = String(cleanId || "").trim();
 
-    // 🧩 Keep valid 24-char ObjectIds (don’t overwrite)
+    // 🚫 Skip invalid or malformed IDs
     if (
       !cleanId ||
       cleanId.length < 10 ||

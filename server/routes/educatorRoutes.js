@@ -1,5 +1,5 @@
 import express from 'express'
-import { addCourse, educatorDashboardData, getEducatorCourses, getEnrolledStudentsData, updateRoleToEducator, toggleCourseVisibility,updateCourse,analyzeFeedbackSentiment } from '../controllers/educatorController.js';
+import { addCourse, educatorDashboardData, getEducatorCourses, getEnrolledStudentsData, updateRoleToEducator, toggleCourseVisibility,updateCourse,analyzeFeedbackSentiment,getCoursesByEducator } from '../controllers/educatorController.js';
 import upload from '../configs/multer.js';
 import { protectEducator } from '../middlewares/authMiddleware.js';
 
@@ -37,6 +37,8 @@ educatorRouter.patch(
 );
 
 educatorRouter.get("/feedback-sentiment", protectEducator, analyzeFeedbackSentiment);
+
+educatorRouter.get("/:id/courses", getCoursesByEducator);
 
 
 export default educatorRouter;

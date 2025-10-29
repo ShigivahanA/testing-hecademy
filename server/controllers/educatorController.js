@@ -275,3 +275,22 @@ export const analyzeFeedbackSentiment = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getCoursesByEducator = async (req, res) => {
+  try {
+    const educatorId = req.params.id;
+
+    const educator = await Educator.findById(educatorId).select("name email imageUrl");
+    if (!educator) {
+      return res.json({ success: false, message: "Educator not found" });
+    }
+
+    const courses = await Course.find({ "educator._id": educatorId })
+      .select("courseTitle coursePrice discount courseThumbnail courseRatings enrolledStudents");
+
+    res.json({ success: true, educator, courses });
+  } catch (error) {
+    console.error("Error fetching educator courses:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};

@@ -159,8 +159,16 @@ const CourseDetails = () => {
             <p>{courseData.enrolledStudents.length} {courseData.enrolledStudents.length > 1 ? 'students' : 'student'}</p>
           </div>
 
-          <p className='text-sm'>Course by <span className='text-blue-600 underline'>{courseData.educator.name}</span></p>
-
+          <p className="text-sm">
+              Course by{" "}
+              <Link
+                to={`/educator/${courseData.educator._id}`}
+                className="text-blue-600 underline hover:text-blue-800"
+                onClick={() => scrollTo(0, 0)}
+              >
+                {courseData.educator.name}
+              </Link>
+            </p>
           <div className="pt-8 text-gray-800">
             <h2 className="text-xl font-semibold">Course Structure</h2>
             <div className="pt-5">

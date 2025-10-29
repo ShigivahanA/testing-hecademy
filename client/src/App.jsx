@@ -28,6 +28,7 @@ import Feedback from "./pages/student/Feedback";
 import ManageFeedback from './pages/educator/ManageFeedback';
 import ManageCourse from './pages/educator/ManageCourse'
 import SentimentChart from './pages/educator/SentimentChart'
+import EducatorCourses from './pages/student/EducatorCourses'
 
 const App = () => {
   const isEducatorRoute = useMatch('/educator/*')
@@ -95,6 +96,7 @@ const App = () => {
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/feedback/:courseId" element={<Feedback />} />
+          <Route path="/educator/:id" element={<EducatorCourses />} />
         </Routes>
       </div>
 

@@ -4,7 +4,7 @@ import Course from "../models/Course.js";
 
 const PYTHON_API = process.env.RECOMMENDER_API_URL || "http://127.0.0.1:5001";
 
-/* 🧹 Clean MongoDB-style objects deeply */
+/* 🧹 Helper — recursively clean Mongo ObjectIDs / numeric wrappers */
 function cleanMongoObject(obj) {
   if (!obj || typeof obj !== "object") return obj;
   if (obj.$oid) return obj.$oid;
@@ -15,6 +15,68 @@ function cleanMongoObject(obj) {
   const cleaned = {};
   for (const key in obj) cleaned[key] = cleanMongoObject(obj[key]);
   return cleaned;
+}
+
+/* 🎯 Normalize topics & goals based on latest taxonomy */
+function normalizePreferences(preferences) {
+  const topicMap = {
+    "web": "Web Development",
+    "frontend": "Frontend Development",
+    "backend": "Backend Development",
+    "ai": "Artificial Intelligence",
+    "ml": "Machine Learning",
+    "cyber": "Cybersecurity",
+    "security": "Network Security",
+    "marketing": "Digital Marketing",
+    "seo": "SEO",
+    "social": "Social Media Marketing",
+    "content": "Content Marketing",
+    "design": "UI/UX Design",
+    "figma": "Design Tools (Figma, Adobe XD)",
+    "project": "Project Management",
+    "entrepreneurship": "Entrepreneurship",
+    "data": "Data Science",
+  };
+
+  const goalMap = {
+    "career": "Career Growth",
+    "job": "Job Readiness",
+    "upskill": "Skill Upgrade / Upskilling",
+    "freelance": "Freelancing",
+    "portfolio": "Portfolio Building",
+    "switch": "Switching Careers",
+    "ai": "Specializing in AI / Data Science",
+    "cyber": "Becoming Cybersecurity Expert",
+    "design": "Becoming UI/UX Designer",
+    "cloud": "Becoming Cloud Engineer",
+    "fun": "Learning for Fun & Creativity"
+  };
+
+  const normalized = { topics: [], goals: [], difficulty: preferences.difficulty || "intermediate" };
+
+  // normalize topics
+  if (Array.isArray(preferences.topics)) {
+    preferences.topics.forEach(t => {
+      const key = t.toLowerCase().trim();
+      const mapped = Object.keys(topicMap).find(k => key.includes(k));
+      normalized.topics.push(mapped ? topicMap[mapped] : t);
+    });
+  }
+
+  // normalize goals
+  if (Array.isArray(preferences.goals)) {
+    preferences.goals.forEach(g => {
+      const key = g.toLowerCase().trim();
+      const mapped = Object.keys(goalMap).find(k => key.includes(k));
+      normalized.goals.push(mapped ? goalMap[mapped] : g);
+    });
+  }
+
+  // remove duplicates & trim
+  normalized.topics = [...new Set(normalized.topics.map(t => t.trim()))];
+  normalized.goals = [...new Set(normalized.goals.map(g => g.trim()))];
+
+  return normalized;
 }
 
 export const getRecommendations = async (req, res) => {
@@ -46,30 +108,36 @@ export const getRecommendations = async (req, res) => {
 
     const enrolledCoursesArray = Array.isArray(user.enrolledCourses)
       ? user.enrolledCourses
-      : Object.values(user.enrolledCourses || {});
+      : user.enrolledCourses
+      ? Object.values(user.enrolledCourses)
+      : [];
 
-    user.preferences = { ...preservedPreferences };
+    // ✅ Restore preserved preferences (normalized)
+    user.preferences = normalizePreferences(preservedPreferences);
 
-    if (!user.preferences.topics?.length) {
+    // 🧩 Fill in missing data with intelligent defaults
+    if (!Array.isArray(user.preferences.topics) || user.preferences.topics.length === 0) {
       const topicPool = [];
-      enrolledCoursesArray.forEach((c) => {
-        if (c.courseTags?.length) topicPool.push(...c.courseTags);
-        else if (c.courseTitle)
-          topicPool.push(...c.courseTitle.split(" "));
+      enrolledCoursesArray.forEach((course) => {
+        if (course.tags?.length) topicPool.push(...course.tags);
+        else if (course.courseTitle)
+          topicPool.push(...course.courseTitle.split(" "));
       });
-      user.preferences.topics = [...new Set(topicPool.map((t) => t.toLowerCase()))].slice(0, 5);
+      user.preferences.topics = [...new Set(topicPool.map((t) => t.trim()))].slice(0, 5);
     }
 
-    if (!user.preferences.goals?.length)
-      user.preferences.goals = ["skill improvement", "career growth"];
+    if (!Array.isArray(user.preferences.goals) || user.preferences.goals.length === 0) {
+      user.preferences.goals = ["Career Growth", "Skill Upgrade / Upskilling"];
+    }
 
-    if (!user.preferences.difficulty)
+    if (!user.preferences.difficulty) {
       user.preferences.difficulty = "intermediate";
+    }
 
     if (!user.activityLog?.length && enrolledCoursesArray?.length) {
-      user.activityLog = enrolledCoursesArray.map((c) => ({
+      user.activityLog = enrolledCoursesArray.map((course) => ({
         action: "watched",
-        courseId: c._id,
+        courseId: course._id,
         details: {},
         timestamp: new Date(),
       }));
@@ -97,26 +165,25 @@ export const getRecommendations = async (req, res) => {
         .map((course, i) => {
           let cleanId = course._id;
           try {
-            if (!cleanId) {
-              cleanId = course.id || course.courseId || "";
-            } else if (typeof cleanId === "object") {
+            if (!cleanId) cleanId = course.id || course.courseId || "";
+            else if (typeof cleanId === "object") {
               if (cleanId.$oid) cleanId = cleanId.$oid;
               else if (cleanId.buffer?.data)
                 cleanId = Buffer.from(cleanId.buffer.data).toString("hex");
               else cleanId = JSON.stringify(cleanId);
             }
-
             cleanId = String(cleanId).trim();
-
-            if (!cleanId || cleanId.includes("object") || cleanId.length < 10) {
-              console.warn(`⚠️ Skipping invalid ID for ${course.title || course.courseTitle}`);
+            if (
+              !cleanId ||
+              cleanId.includes("object") ||
+              cleanId.startsWith("fallback_") ||
+              cleanId.length < 10
+            )
               return null;
-            }
           } catch (err) {
-            console.warn(`⚠️ ID cleaning failed at index ${i}:`, err.message);
+            console.warn(`⚠️ ID cleaning failed for course index ${i}:`, err.message);
             return null;
           }
-
           return { ...course, _id: cleanId };
         })
         .filter(Boolean);
@@ -127,7 +194,7 @@ export const getRecommendations = async (req, res) => {
       );
 
       if (cleanedRecommendations.length === 0) {
-        console.warn("⚠️ All recommended IDs invalid — fallback activated.");
+        console.warn("⚠️ All recommended IDs invalid, fetching fallback...");
         const fallback = await Course.find({ isPublished: true })
           .sort({ rating: -1, createdAt: -1 })
           .limit(5)
@@ -135,14 +202,14 @@ export const getRecommendations = async (req, res) => {
         return res.json({
           success: true,
           recommended: fallback,
-          message: "Fallback returned (invalid IDs).",
+          message: "Fallback returned because all recommendations had invalid IDs.",
         });
       }
 
       return res.json({ success: true, recommended: cleanedRecommendations });
     }
 
-    console.warn("⚠️ No personalized matches — fallback mode.");
+    console.warn("⚠️ No personalized matches — returning fallback.");
     const fallback = await Course.find({ isPublished: true })
       .sort({ rating: -1, createdAt: -1 })
       .limit(5)
@@ -151,7 +218,8 @@ export const getRecommendations = async (req, res) => {
     return res.json({
       success: true,
       recommended: fallback,
-      message: "No personalized matches. Showing popular courses.",
+      message:
+        "No personalized matches found. Showing popular courses instead.",
     });
   } catch (err) {
     console.error("❌ Recommendation error:", err.message);
@@ -163,7 +231,8 @@ export const getRecommendations = async (req, res) => {
     return res.json({
       success: false,
       recommended: fallback,
-      message: "Recommender service unavailable. Showing top courses.",
+      message:
+        "Recommender service unavailable. Showing top courses temporarily.",
     });
   }
 };

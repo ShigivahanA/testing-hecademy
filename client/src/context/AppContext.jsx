@@ -171,37 +171,72 @@ const fetchUserData = async () => {
     setLoadingUser(false); 
         }
     }, [user])
-    useEffect(() => {
-  if (userData && !isEducator) {
-    fetchRecommendations();
-  }
-}, [userData?.preferences, isEducator]);
-
-
-
-const fetchRecommendations = async () => {
+    const fetchRecommendations = async () => {
   try {
     setLoadingRecommendations(true);
     const token = await getToken();
     if (!token) return;
 
+    // ✅ Use backend API that internally calls Python recommender
     const { data } = await axios.post(
-      backendUrl + "/api/recommendations/user",
+      `${backendUrl}/api/recommendations/user`,
       {},
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
+    // ✅ Fallback if Node fails to connect to Python
+    if (!data.success && pybackendUrl) {
+      console.warn("⚠️ Node recommender unavailable — hitting Python directly...");
+      const userResponse = await axios.get(`${backendUrl}/api/user/data`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const courseResponse = await axios.get(`${backendUrl}/api/course/all`);
+      const { user } = userResponse.data;
+      const { courses } = courseResponse.data;
+
+      const { data: pyData } = await axios.post(`${pybackendUrl}/recommend`, {
+        user,
+        courses,
+      });
+
+      if (pyData.success && pyData.recommended?.length > 0) {
+        setRecommendations(pyData.recommended);
+        return;
+      }
+    }
+
+    // ✅ Normal successful case
     if (data.success && data.recommended?.length > 0) {
       setRecommendations(data.recommended);
     } else {
+      console.warn("⚠️ No personalized matches found — using fallback recommendations.");
       setRecommendations([]);
     }
   } catch (error) {
-    toast.error("Recommendation error: " + error.message);
+    console.error("❌ Recommendation error:", error.message);
+    toast.error("Failed to fetch recommendations.");
   } finally {
     setLoadingRecommendations(false);
   }
 };
+
+
+useEffect(() => {
+  if (userData && !isEducator) {
+    const hasPrefs =
+      userData.preferences &&
+      (userData.preferences.topics?.length > 0 ||
+        userData.preferences.goals?.length > 0);
+
+    if (hasPrefs) {
+      fetchRecommendations();
+    } else {
+      console.log("⚠️ Skipping recommendation fetch — no preferences found yet.");
+      setRecommendations([]);
+    }
+  }
+}, [userData?.preferences, isEducator]);
 
 const fetchCertificates = async () => {
   try {

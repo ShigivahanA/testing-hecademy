@@ -128,20 +128,44 @@ def get_hybrid_recommendations(user, courses):
     normalize_column(course_df, "courseTags", "tags")
 
     # ✅ Robust ID cleaning (handles dict, NaN, buffer, etc.)
+        # ✅ Robust ID cleaning (handles dicts, ObjectId, Buffer, NaN, etc.)
     def fix_id(v):
+        """Deeply extract ID strings from any nested or malformed structure."""
         if isinstance(v, dict):
             if "$oid" in v:
-                return v["$oid"]
-            elif "_id" in v:
+                return str(v["$oid"])
+            if "_id" in v:
                 return fix_id(v["_id"])
-            elif "buffer" in v and "data" in v["buffer"]:
+            if "courseId" in v:
+                return fix_id(v["courseId"])
+            if "buffer" in v and isinstance(v["buffer"], dict):
+                data = v["buffer"].get("data", [])
                 try:
-                    return "".join(format(x, "02x") for x in v["buffer"]["data"])
+                    return "".join(format(x, "02x") for x in data)
                 except Exception:
-                    return str(v["buffer"]["data"])
-        if isinstance(v, str) and len(v) >= 12:
-            return v
-        return str(v or "").strip()
+                    return str(data)
+            # if nothing matches, recursively flatten
+            return str(next(iter(v.values()), ""))
+        if isinstance(v, (bytes, bytearray)):
+            return v.hex()
+        if isinstance(v, str):
+            return v.strip()
+        if v is None:
+            return ""
+        return str(v)
+
+    # 🧼 FIX: clean IDs BEFORE DataFrame creation
+    for c in courses:
+        if "_id" in c:
+            c["_id"] = fix_id(c["_id"])
+
+    course_df = pd.DataFrame(courses)
+
+    if "_id" not in course_df.columns:
+        course_df["_id"] = ""
+
+    # 🧼 FIX: clean IDs AFTER DataFrame creation too
+    course_df["_id"] = course_df["_id"].apply(fix_id)
 
     if "_id" in course_df.columns:
         course_df["_id"] = course_df["_id"].apply(lambda v: fix_id(v) if not isinstance(v, str) else v)

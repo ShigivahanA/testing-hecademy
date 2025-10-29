@@ -171,37 +171,44 @@ export const getRecommendations = async (req, res) => {
     if (data.success && data.recommended?.length > 0) {
       const cleanedRecommendations = data.recommended
         .map((course, i) => {
-          let cleanId = course._id;
+  let cleanId = course._id;
 
-          try {
-            // Normalize deeply nested or malformed IDs
-            if (typeof cleanId === "object" && cleanId !== null) {
-              if (cleanId.$oid) cleanId = cleanId.$oid;
-              else if (cleanId._id && cleanId._id.$oid) cleanId = cleanId._id.$oid;
-              else if (cleanId.buffer?.data)
-                cleanId = Buffer.from(cleanId.buffer.data).toString("hex");
-              else cleanId = "";
-            }
+  try {
+    // 🧹 Normalize nested IDs (only if needed)
+    if (typeof cleanId === "object" && cleanId !== null) {
+      if (cleanId.$oid) cleanId = cleanId.$oid;
+      else if (cleanId._id?.$oid) cleanId = cleanId._id.$oid;
+      else if (cleanId.buffer?.data)
+        cleanId = Buffer.from(cleanId.buffer.data).toString("hex");
+      else if (cleanId.courseId) cleanId = cleanId.courseId;
+      else cleanId = "";
+    }
 
-            cleanId = String(cleanId || "").trim();
+    // ✅ Only process if not already string
+    if (typeof cleanId !== "string") {
+      cleanId = String(cleanId || "").trim();
+    }
 
-            if (
-              !cleanId ||
-              cleanId.toLowerCase().includes("object") ||
-              cleanId.toLowerCase().includes("none") ||
-              cleanId.toLowerCase().includes("nan") ||
-              cleanId === "{}"
-            ) {
-              console.warn(`⚠️ Skipping invalid course ID at index ${i}:`, cleanId);
-              return null;
-            }
-          } catch (err) {
-            console.warn(`⚠️ ID cleaning failed for course index ${i}:`, err.message);
-            return null;
-          }
+    // 🧩 Keep valid 24-char ObjectIds (don’t overwrite)
+    if (
+      !cleanId ||
+      cleanId.length < 10 ||
+      cleanId.toLowerCase().includes("object") ||
+      cleanId.toLowerCase().includes("none") ||
+      cleanId.toLowerCase().includes("nan") ||
+      cleanId === "{}"
+    ) {
+      console.warn(`⚠️ Skipping invalid course ID at index ${i}:`, cleanId);
+      return null;
+    }
+  } catch (err) {
+    console.warn(`⚠️ ID cleaning failed for course index ${i}:`, err.message);
+    return null;
+  }
 
-          return { ...course, _id: cleanId };
-        })
+  return { ...course, _id: cleanId };
+})
+
         .filter(Boolean);
 
       console.log(

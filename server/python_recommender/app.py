@@ -128,7 +128,10 @@ def get_hybrid_recommendations(user, courses):
     normalize_column(course_df, "courseTags", "tags")
 
     if "_id" in course_df.columns:
-        course_df["_id"] = course_df["_id"].apply(clean_object_id)
+        course_df["_id"] = course_df["_id"].apply(lambda x: clean_object_id(x) if pd.notna(x) else "")
+    else:
+        course_df["_id"] = ""
+
 
     # Fill missing columns
     for col in ["title", "description", "tags", "difficulty"]:
@@ -205,7 +208,14 @@ def get_hybrid_recommendations(user, courses):
     # ------------------------------
     course_df["score"] = hybrid_scores
     top = course_df.sort_values("score", ascending=False).head(5)
-    top["_id"] = top["_id"].apply(clean_object_id)
+    top["_id"] = top["_id"].apply(lambda x: clean_object_id(x))
+    recs = top.to_dict(orient="records")
+
+# ✅ Force ensure _id is string and not empty
+    for r in recs:
+        if not r.get("_id") or not isinstance(r["_id"], str) or len(r["_id"].strip()) < 10:
+            print("⚠️ Missing or invalid _id, skipping:", r.get("_id"))
+            r["_id"] = str(r.get("_id") or "").replace("ObjectId(", "").replace(")", "").strip()
 
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user.get("preferences", {}).get("topics", []))
@@ -215,7 +225,7 @@ def get_hybrid_recommendations(user, courses):
     print("Top 5 Courses:", top[["title", "score"]].to_dict(orient="records"))
     print("========================================\n")
 
-    return top.to_dict(orient="records")
+    return recs
 
 
 # ======================

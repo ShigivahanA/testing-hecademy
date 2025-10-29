@@ -127,11 +127,26 @@ def get_hybrid_recommendations(user, courses):
     normalize_column(course_df, "courseDescription", "description")
     normalize_column(course_df, "courseTags", "tags")
 
-    if "_id" in course_df.columns:
-        course_df["_id"] = course_df["_id"].apply(lambda x: clean_object_id(x) if pd.notna(x) else "")
-    else:
-        course_df["_id"] = ""
+    # ✅ Robust ID cleaning (handles dict, NaN, buffer, etc.)
+    def fix_id(v):
+        if isinstance(v, dict):
+            if "$oid" in v:
+                return v["$oid"]
+            elif "_id" in v:
+                return fix_id(v["_id"])
+            elif "buffer" in v and "data" in v["buffer"]:
+                try:
+                    return "".join(format(x, "02x") for x in v["buffer"]["data"])
+                except Exception:
+                    return str(v["buffer"]["data"])
+        if isinstance(v, str) and len(v) >= 12:
+            return v
+        return str(v or "").strip()
 
+    if "_id" in course_df.columns:
+        course_df["_id"] = course_df["_id"].apply(fix_id)
+    else:
+        course_df["_id"] = [fix_id(c.get("_id", "")) for c in courses]
 
     # Fill missing columns
     for col in ["title", "description", "tags", "difficulty"]:
@@ -140,9 +155,11 @@ def get_hybrid_recommendations(user, courses):
 
     course_df["tags"] = course_df["tags"].apply(lambda x: x if isinstance(x, list) else [])
     course_df["combined_text"] = (
-        course_df["title"].astype(str) + " " +
-        course_df["description"].astype(str) + " " +
-        course_df["tags"].apply(lambda x: " ".join(x))
+        course_df["title"].astype(str)
+        + " "
+        + course_df["description"].astype(str)
+        + " "
+        + course_df["tags"].apply(lambda x: " ".join(x))
     )
 
     # ------------------------------
@@ -163,7 +180,7 @@ def get_hybrid_recommendations(user, courses):
 
     if logs:
         df_logs = pd.DataFrame([
-            {"courseId": clean_object_id(log.get("courseId")), "score": 1.5 if log.get("action") == "completed_quiz" else 1.0}
+            {"courseId": fix_id(log.get("courseId")), "score": 1.5 if log.get("action") == "completed_quiz" else 1.0}
             for log in logs
         ])
         df_logs = df_logs.groupby("courseId").mean().reset_index()
@@ -200,7 +217,7 @@ def get_hybrid_recommendations(user, courses):
         else:
             fallback = course_df.head(5)
 
-        fallback["_id"] = fallback["_id"].apply(clean_object_id)
+        fallback["_id"] = fallback["_id"].apply(fix_id)
         return fallback.to_dict(orient="records")
 
     # ------------------------------
@@ -208,25 +225,22 @@ def get_hybrid_recommendations(user, courses):
     # ------------------------------
     course_df["score"] = hybrid_scores
     top = course_df.sort_values("score", ascending=False).head(5)
-    top["_id"] = top["_id"].apply(lambda x: clean_object_id(x))
+    top["_id"] = top["_id"].apply(fix_id)
+
     recs = top.to_dict(orient="records")
 
-# ✅ Force ensure _id is string and not empty
+    # ✅ Final cleanup — ensure string IDs
     for r in recs:
-        if not r.get("_id") or not isinstance(r["_id"], str) or len(r["_id"].strip()) < 10:
-            print("⚠️ Missing or invalid _id, skipping:", r.get("_id"))
-            r["_id"] = str(r.get("_id") or "").replace("ObjectId(", "").replace(")", "").strip()
+        r["_id"] = fix_id(r.get("_id"))
 
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user.get("preferences", {}).get("topics", []))
     print("User Goals:", user.get("preferences", {}).get("goals", []))
-    print("Normalized:", user_text)
     print("Preferred Difficulty:", preferred_diff)
-    print("Top 5 Courses:", top[["title", "score"]].to_dict(orient="records"))
+    print("Top 5 Course IDs:", [r["_id"] for r in recs])
     print("========================================\n")
 
     return recs
-
 
 # ======================
 # 🔗 API Endpoint

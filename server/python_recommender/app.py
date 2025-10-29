@@ -238,14 +238,28 @@ def get_hybrid_recommendations(user, courses):
     top = course_df.sort_values("score", ascending=False).head(5)
     top["_id"] = top["_id"].apply(fix_id)
 
+    # Convert to list of dicts
     recs = top.to_dict(orient="records")
 
-    # ✅ Final cleanup
-    for r in recs:
-        if not isinstance(r.get("_id"), str):
-            r["_id"] = fix_id(r["_id"])
-        if "[object" in str(r["_id"]):
-            r["_id"] = fix_id(r["_id"])
+# ✅ Deep-clean nested or re-wrapped IDs
+    def deep_clean_ids(obj):
+        if isinstance(obj, list):
+            return [deep_clean_ids(x) for x in obj]
+        elif isinstance(obj, dict):
+            cleaned = {}
+            for k, v in obj.items():
+                if k == "_id":
+                    cleaned[k] = fix_id(v)
+                else:
+                    cleaned[k] = deep_clean_ids(v)
+            return cleaned
+        else:
+            return obj
+
+    recs = deep_clean_ids(recs)
+
+    # Log clean result
+    print("🧾 Deep-cleaned IDs:", [r["_id"] for r in recs])
 
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user.get("preferences", {}).get("topics", []))

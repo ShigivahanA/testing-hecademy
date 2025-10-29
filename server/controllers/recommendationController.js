@@ -106,15 +106,24 @@ export const getRecommendations = async (req, res) => {
     );
 
     if (data.success && data.recommended?.length > 0) {
-  const cleanedRecommendations = data.recommended.map((c) => ({
-    ...c,
-    _id:
-      typeof c._id === "object" && c._id.$oid
-        ? c._id.$oid
-        : typeof c._id === "object" && c._id.buffer
-        ? String(c._id.buffer) // convert Buffer to string
-        : String(c._id),
-  }));
+  // 🧹 Clean all IDs returned from Python recommender
+  const cleanedRecommendations = data.recommended.map((course) => {
+    let cleanId = course._id;
+
+    if (typeof cleanId === "object") {
+      if (cleanId.$oid) {
+        cleanId = cleanId.$oid;
+      } else if (cleanId.buffer) {
+        cleanId = Buffer.from(cleanId.buffer.data || []).toString("hex") || "";
+      } else {
+        cleanId = JSON.stringify(cleanId);
+      }
+    }
+
+    return { ...course, _id: String(cleanId) };
+  });
+
+  console.log("🧼 Cleaned Recommendation IDs:", cleanedRecommendations.map(c => c._id));
   return res.json({ success: true, recommended: cleanedRecommendations });
 }
 

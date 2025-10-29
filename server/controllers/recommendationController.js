@@ -174,12 +174,16 @@ export const getRecommendations = async (req, res) => {
             }
             cleanId = String(cleanId).trim();
             if (
-              !cleanId ||
-              cleanId.includes("object") ||
-              cleanId.startsWith("fallback_") ||
-              cleanId.length < 10
-            )
-              return null;
+  !cleanId ||
+  typeof cleanId !== "string" ||
+  cleanId.toLowerCase().includes("object") ||
+  cleanId.toLowerCase().includes("none") ||
+  cleanId.toLowerCase().includes("nan")
+) {
+  console.warn("⚠️ Skipping invalid course ID:", cleanId);
+  return null;
+}
+
           } catch (err) {
             console.warn(`⚠️ ID cleaning failed for course index ${i}:`, err.message);
             return null;

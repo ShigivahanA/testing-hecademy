@@ -1,7 +1,7 @@
 # ===========================================
-# 🚀 Hecademy Hybrid Recommender Service (v1.6)
+# 🚀 Hecademy Hybrid Recommender Service (v1.6.3)
 # ===========================================
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -13,6 +13,8 @@ import uvicorn
 import os
 import traceback
 import re
+import json
+import time
 
 # ======================
 # ⚙️ FastAPI setup
@@ -20,7 +22,7 @@ import re
 app = FastAPI(
     title="Hecademy Hybrid Recommender API",
     description="Hybrid engine combining content-based, collaborative, and difficulty weighting.",
-    version="1.6.0"
+    version="1.6.3"
 )
 
 app.add_middleware(
@@ -49,26 +51,21 @@ def fix_id(v):
     if v is None:
         return ""
     if isinstance(v, dict):
-        # Mongo-style {"$oid": "..."}
         if "$oid" in v:
             return str(v["$oid"])
-        # Nested _id fields
         if "_id" in v:
             return fix_id(v["_id"])
-        # Node.js Buffer object
         if "buffer" in v and "data" in v["buffer"]:
             data = v["buffer"].get("data", [])
             try:
                 return "".join(format(x, "02x") for x in data)
             except Exception:
                 return str(data)
-        # Numeric key dicts like {"0": {...}, "1": {...}}
         for key, val in v.items():
             if isinstance(val, dict) and "$oid" in val:
                 return str(val["$oid"])
             if isinstance(val, str) and len(val) >= 12 and all(c in "0123456789abcdef" for c in val.lower()):
                 return val
-        # Default flatten
         return str(v)
     if isinstance(v, (list, tuple, set)):
         return ", ".join(str(x) for x in v)
@@ -117,6 +114,13 @@ def normalize_user_text(user):
 # 🧩 Hybrid Recommendation Logic
 # ======================
 def get_hybrid_recommendations(user, courses):
+    start_time = time.time()
+    print("\n🟦 [INCOMING REQUEST DATA]")
+    print(f"🧠 User Preferences: {json.dumps(user.get('preferences', {}), indent=2)}")
+    print(f"📚 Received {len(courses)} courses from Node.")
+    if len(courses) > 0:
+        print("📋 Sample Course Keys:", list(courses[0].keys())[:10])
+
     if not courses:
         print("⚠️ No courses provided.")
         return []
@@ -133,6 +137,10 @@ def get_hybrid_recommendations(user, courses):
         course_df["_id"] = ""
     course_df["_id"] = course_df["_id"].apply(fix_id)
 
+    print(f"🧾 DataFrame shape: {course_df.shape}")
+    print("🧾 Columns:", course_df.columns.tolist())
+
+    # Normalization
     def normalize_column(df, old, new):
         if old in df.columns and new not in df.columns:
             df[new] = df[old]
@@ -141,7 +149,6 @@ def get_hybrid_recommendations(user, courses):
     normalize_column(course_df, "courseDescription", "description")
     normalize_column(course_df, "courseTags", "tags")
 
-    # Fill missing columns
     for col in ["title", "description", "tags", "difficulty"]:
         if col not in course_df.columns:
             course_df[col] = ""
@@ -159,44 +166,37 @@ def get_hybrid_recommendations(user, courses):
         + course_df["tags"].apply(lambda x: " ".join(x))
     )
 
-    # 🧼 Clean HTML tags and strip
-    course_df["combined_text"] = course_df["combined_text"].replace(
-        to_replace=r"<.*?>", value="", regex=True
-    ).str.strip()
-
-    # 🧩 Fallback for empty text
+    course_df["combined_text"] = course_df["combined_text"].replace(to_replace=r"<.*?>", value="", regex=True).str.strip()
     course_df["combined_text"] = course_df["combined_text"].apply(
         lambda t: t if isinstance(t, str) and len(t.strip()) > 3 else "untitled course content"
     )
 
-    # 🚨 Vocabulary safety check
-    if course_df["combined_text"].isna().all() or not any(course_df["combined_text"].str.strip()):
-        print("⚠️ All course text empty — returning fallback recommendations.")
-        return course_df.head(5).to_dict(orient="records")
+    print("🧹 Sample combined text snippet:", course_df["combined_text"].iloc[0][:300])
 
     # ------------------------------
     # 🧩 Step 3: Content-Based Filtering
     # ------------------------------
     vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), max_features=7000, min_df=1)
     tfidf_matrix = vectorizer.fit_transform(course_df["combined_text"])
+    print(f"📊 TF-IDF Matrix shape: {tfidf_matrix.shape}")
 
     user_text = normalize_user_text(user)
     user_vector = vectorizer.transform([user_text])
+    print(f"🧠 User Vector (nonzero): {np.count_nonzero(user_vector.toarray())}")
+
     content_scores = cosine_similarity(user_vector, tfidf_matrix).flatten()
 
     # ------------------------------
-    # 🤝 Step 4: Collaborative Filtering (Activity-based)
+    # 🤝 Step 4: Collaborative Filtering
     # ------------------------------
     logs = user.get("activityLog", [])
     cf_scores = np.zeros(len(course_df))
-
     if logs:
         df_logs = pd.DataFrame([
             {"courseId": fix_id(log.get("courseId")), "score": 1.5 if log.get("action") == "completed_quiz" else 1.0}
             for log in logs
         ])
         df_logs = df_logs.groupby("courseId").mean().reset_index()
-
         for idx, cid in enumerate(course_df["_id"].astype(str)):
             match = df_logs[df_logs["courseId"] == cid]
             if not match.empty:
@@ -206,15 +206,14 @@ def get_hybrid_recommendations(user, courses):
     # ⚖️ Step 5: Weighted Hybrid Scoring
     # ------------------------------
     hybrid_scores = 0.65 * content_scores + 0.35 * cf_scores
+    print(f"🧮 Hybrid Score Range: min={hybrid_scores.min():.4f}, max={hybrid_scores.max():.4f}")
 
     # ------------------------------
     # 🎚️ Step 6: Difficulty Weight
     # ------------------------------
     preferred_diff = user.get("preferences", {}).get("difficulty", "")
     if preferred_diff:
-        diff_boost = course_df["difficulty"].apply(
-            lambda d: 1.15 if str(d).lower() == preferred_diff.lower() else 1.0
-        )
+        diff_boost = course_df["difficulty"].apply(lambda d: 1.15 if str(d).lower() == preferred_diff.lower() else 1.0)
         hybrid_scores *= diff_boost
 
     # ------------------------------
@@ -238,10 +237,9 @@ def get_hybrid_recommendations(user, courses):
     top = course_df.sort_values("score", ascending=False).head(5)
     top["_id"] = top["_id"].apply(fix_id)
 
-    # Convert to list of dicts
     recs = top.to_dict(orient="records")
 
-# ✅ Deep-clean nested or re-wrapped IDs
+    # ✅ Deep-clean nested or re-wrapped IDs
     def deep_clean_ids(obj):
         if isinstance(obj, list):
             return [deep_clean_ids(x) for x in obj]
@@ -258,15 +256,16 @@ def get_hybrid_recommendations(user, courses):
 
     recs = deep_clean_ids(recs)
 
-    # Log clean result
     print("🧾 Deep-cleaned IDs:", [r["_id"] for r in recs])
-
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user.get("preferences", {}).get("topics", []))
     print("User Goals:", user.get("preferences", {}).get("goals", []))
     print("Preferred Difficulty:", preferred_diff)
-    print("Top 5 Course IDs:", [r["_id"] for r in recs])
-    print("========================================\n")
+    print("🏁 Top 5 Recommendations:")
+    for r in recs:
+        print(f"   {r['_id']} → {r.get('title', '')[:60]} ({round(r.get('score', 0), 4)})")
+    print("========================================")
+    print(f"🕒 Processing Time: {round(time.time() - start_time, 2)}s\n")
 
     return recs
 
@@ -280,7 +279,11 @@ async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Heade
         raise HTTPException(status_code=403, detail="Invalid or missing API key")
 
     try:
+        print("\n📨 Incoming /recommend request received.")
         recs = get_hybrid_recommendations(req.user, req.courses)
+        print("📤 Outgoing Response Summary:")
+        print(json.dumps({"count": len(recs), "ids": [r.get('_id') for r in recs]}, indent=2))
+        print("========================================================\n")
         return {"success": True, "recommended": recs}
     except Exception as e:
         print("❌ Recommender Error:", str(e))
@@ -293,5 +296,5 @@ async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Heade
 # ======================
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5001))
-    print(f"🚀 Starting Hecademy Hybrid Recommender v1.6 on port {port}")
+    print(f"🚀 Starting Hecademy Hybrid Recommender v1.6.3 on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)

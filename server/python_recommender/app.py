@@ -1,5 +1,5 @@
 # ===========================================
-# 🚀 Hecademy Hybrid Recommender Service (v1.5.1)
+# 🚀 Hecademy Hybrid Recommender Service (v1.5)
 # ===========================================
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
@@ -20,7 +20,7 @@ import re
 app = FastAPI(
     title="Hecademy Hybrid Recommender API",
     description="Hybrid engine combining content-based, collaborative, and difficulty weighting.",
-    version="1.5.1"
+    version="1.5.0"
 )
 
 app.add_middleware(
@@ -42,54 +42,33 @@ class RecommendationRequest(BaseModel):
 
 
 # ======================
-# 🧩 Helper — Clean IDs safely (enhanced & robust)
+# 🧩 Helper — Clean IDs safely (robust version)
 # ======================
 def clean_object_id(value):
-    """Ensure Mongo-like ObjectIDs, Buffers, or dicts become consistent 24-char hex strings."""
-    try:
-        if value is None:
-            return ""
-
-        # Handle dicts that wrap ObjectId-like data
-        if isinstance(value, dict):
-            if "$oid" in value:
-                return str(value["$oid"])
-            elif "_id" in value and isinstance(value["_id"], dict):
-                # Handle nested { "_id": {"$oid": "..." } }
-                inner = value["_id"]
-                if "$oid" in inner:
-                    return str(inner["$oid"])
-            elif "courseId" in value:
-                return clean_object_id(value["courseId"])
-            elif "buffer" in value and "data" in value["buffer"]:
-                # Handle Buffer -> hex conversion
-                data = value["buffer"].get("data", [])
-                try:
-                    hexid = "".join(format(x, "02x") for x in data)
-                    if len(hexid) == 24:
-                        return hexid
-                    return ""
-                except Exception:
-                    return ""
-            else:
-                # recursively find any nested $oid
-                for k, v in value.items():
-                    if isinstance(v, dict) and "$oid" in v:
-                        return str(v["$oid"])
-                return str(value)
-
-        # Handle string ObjectId
-        if isinstance(value, str):
-            val = value.strip()
-            if len(val) == 24 and all(c in "0123456789abcdef" for c in val.lower()):
-                return val
-            return val
-
-        # Handle unexpected types (int, float, etc.)
-        return str(value)
-    except Exception as e:
-        print(f"⚠️ clean_object_id error: {e}")
+    """Ensure Mongo-like ObjectIDs or Buffers become consistent strings."""
+    if value is None:
         return ""
+    if isinstance(value, dict):
+        if "$oid" in value:
+            return str(value["$oid"])
+        elif "_id" in value:
+            return clean_object_id(value["_id"])
+        elif "courseId" in value:
+            return clean_object_id(value["courseId"])
+        elif "buffer" in value and "data" in value["buffer"]:
+            data = value["buffer"].get("data", [])
+            try:
+                return "".join(format(x, "02x") for x in data)
+            except Exception:
+                return str(data)
+        else:
+            for k, v in value.items():
+                if isinstance(v, dict) and "$oid" in v:
+                    return str(v["$oid"])
+            return str(value)
+    if isinstance(value, str) and len(value) == 24 and all(c in "0123456789abcdef" for c in value.lower()):
+        return value
+    return str(value)
 
 
 # ======================
@@ -148,7 +127,6 @@ def get_hybrid_recommendations(user, courses):
     normalize_column(course_df, "courseDescription", "description")
     normalize_column(course_df, "courseTags", "tags")
 
-    # 🔧 Clean all IDs safely
     if "_id" in course_df.columns:
         course_df["_id"] = course_df["_id"].apply(clean_object_id)
 
@@ -220,26 +198,21 @@ def get_hybrid_recommendations(user, courses):
             fallback = course_df.head(5)
 
         fallback["_id"] = fallback["_id"].apply(clean_object_id)
-        fallback = fallback[fallback["_id"].apply(lambda x: isinstance(x, str) and len(x) >= 12)]
         return fallback.to_dict(orient="records")
 
     # ------------------------------
-    # 🏁 Step 7: Rank, Validate, Clean IDs
+    # 🏁 Step 7: Rank, Clean, Return
     # ------------------------------
     course_df["score"] = hybrid_scores
     top = course_df.sort_values("score", ascending=False).head(5)
     top["_id"] = top["_id"].apply(clean_object_id)
-
-    # Filter out invalid IDs (length < 10, empty, NaN)
-    top = top[top["_id"].apply(lambda x: isinstance(x, str) and len(x.strip()) >= 10)]
 
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user.get("preferences", {}).get("topics", []))
     print("User Goals:", user.get("preferences", {}).get("goals", []))
     print("Normalized:", user_text)
     print("Preferred Difficulty:", preferred_diff)
-    print("Total Valid Courses:", len(course_df))
-    print("Top 5 Courses:", top[["title", "_id", "score"]].to_dict(orient="records"))
+    print("Top 5 Courses:", top[["title", "score"]].to_dict(orient="records"))
     print("========================================\n")
 
     return top.to_dict(orient="records")
@@ -255,12 +228,8 @@ async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Heade
 
     try:
         recs = get_hybrid_recommendations(req.user, req.courses)
-
-        # 🧹 Ensure IDs are fully cleaned
         for r in recs:
             r["_id"] = clean_object_id(r.get("_id", ""))
-        recs = [r for r in recs if r.get("_id") and len(str(r["_id"])) >= 10]
-
         return {"success": True, "recommended": recs}
     except Exception as e:
         print("❌ Recommender Error:", str(e))

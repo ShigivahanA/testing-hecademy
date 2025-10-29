@@ -63,11 +63,11 @@ const EducatorCourses = () => {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gradient-to-b from-cyan-100/70 to-white w-full">
+      <div className="min-h-screen to-white w-full bg-gradient-to-b from-cyan-100/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-20 pt-20 pb-16">
           {/* Educator Info */}
           {educator && (
-            <div className="text-center mb-10 flex flex-col items-center justify-center">
+            <div className="text-center mb-10 flex flex-col items-center justify-center ">
               <img
                 src={educator.imageUrl || assets.profile_icon}
                 alt={educator.name}

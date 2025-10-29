@@ -287,7 +287,7 @@ const CourseDetails = () => {
               </p>
             </div>
             <div className="flex gap-3 items-center pt-2">
-              <p className="text-gray-800 md:text-4xl text-2xl font-semibold">{currency}{(courseData.coursePrice - courseData.discount * courseData.coursePrice / 100).toFixed(2)}</p>
+              <p className="text-gray-800 md:text-4xl text-2xl font-semibold">{currency}{(courseData.coursePrice - courseData.discount * courseData.coursePrice / 100).toFixed(0)}</p>
               <p className="md:text-lg text-gray-500 line-through">{currency}{courseData.coursePrice}</p>
               <p className="md:text-lg text-gray-500">{courseData.discount}% off</p>
             </div>

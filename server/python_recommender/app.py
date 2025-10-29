@@ -144,9 +144,12 @@ def get_hybrid_recommendations(user, courses):
         return str(v or "").strip()
 
     if "_id" in course_df.columns:
-        course_df["_id"] = course_df["_id"].apply(fix_id)
+        course_df["_id"] = course_df["_id"].apply(lambda v: fix_id(v) if not isinstance(v, str) else v)
     else:
         course_df["_id"] = [fix_id(c.get("_id", "")) for c in courses]
+
+    # ✅ NEW: forcefully clean again after Pandas conversion
+    course_df["_id"] = course_df["_id"].apply(lambda v: fix_id(v))
 
     # Fill missing columns
     for col in ["title", "description", "tags", "difficulty"]:
@@ -231,7 +234,11 @@ def get_hybrid_recommendations(user, courses):
 
     # ✅ Final cleanup — ensure string IDs
     for r in recs:
-        r["_id"] = fix_id(r.get("_id"))
+        if isinstance(r.get("_id"), dict):
+            r["_id"] = fix_id(r["_id"])
+        elif not isinstance(r["_id"], str) or "[object" in r["_id"]:
+            r["_id"] = fix_id(r["_id"])
+
 
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user.get("preferences", {}).get("topics", []))

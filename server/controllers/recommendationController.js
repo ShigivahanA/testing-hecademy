@@ -106,49 +106,60 @@ export const getRecommendations = async (req, res) => {
     );
 
  if (data.success && data.recommended?.length > 0) {
-  // 🧹 Clean all IDs returned from Python recommender
-  const cleanedRecommendations = data.recommended.map((course, i) => {
-    let cleanId = course._id;
+  const cleanedRecommendations = data.recommended
+    .map((course, i) => {
+      let cleanId = course._id;
 
-    try {
-      if (!cleanId) {
-        // fallback — maybe the course had no ID
-        cleanId = course.id || course.courseId || `fallback_${i}`;
-      } else if (typeof cleanId === "object") {
-        if (cleanId.$oid) {
-          cleanId = cleanId.$oid;
-        } else if (cleanId.buffer?.data) {
-          cleanId = Buffer.from(cleanId.buffer.data).toString("hex");
-        } else if (cleanId.data) {
-          // Sometimes _id might come as { data: [..] }
-          cleanId = Buffer.from(cleanId.data).toString("hex");
-        } else {
-          cleanId = JSON.stringify(cleanId);
+      try {
+        if (!cleanId) {
+          cleanId = course.id || course.courseId || "";
+        } else if (typeof cleanId === "object") {
+          if (cleanId.$oid) cleanId = cleanId.$oid;
+          else if (cleanId.buffer?.data)
+            cleanId = Buffer.from(cleanId.buffer.data).toString("hex");
+          else cleanId = JSON.stringify(cleanId);
         }
+
+        cleanId = String(cleanId).trim();
+
+        // ⚠️ Skip invalid ones
+        if (
+          !cleanId ||
+          cleanId.includes("object") ||
+          cleanId.startsWith("fallback_") ||
+          cleanId.length < 10
+        )
+          return null;
+      } catch (err) {
+        console.warn(`⚠️ ID cleaning failed for course index ${i}:`, err.message);
+        return null;
       }
 
-      // Ensure clean string always
-      cleanId = String(cleanId).trim();
-
-      // Guard: remove invalid strings (like "[object Object]" or empty)
-      if (!cleanId || cleanId.includes("object") || cleanId.length < 5) {
-        cleanId = `fallback_${i}`;
-      }
-    } catch (err) {
-      console.warn(`⚠️ ID cleaning failed for course index ${i}:`, err.message);
-      cleanId = `fallback_${i}`;
-    }
-
-    return { ...course, _id: cleanId };
-  });
+      return { ...course, _id: cleanId };
+    })
+    .filter(Boolean); // remove nulls
 
   console.log(
     "🧼 Cleaned Recommendation IDs:",
     cleanedRecommendations.map((c) => c._id)
   );
 
+  if (cleanedRecommendations.length === 0) {
+    console.warn("⚠️ All recommended IDs invalid, fetching fallback...");
+    const fallback = await Course.find({ isPublished: true })
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(5)
+      .lean();
+    return res.json({
+      success: true,
+      recommended: fallback,
+      message: "Fallback returned because all recommendations had invalid IDs.",
+    });
+  }
+
   return res.json({ success: true, recommended: cleanedRecommendations });
 }
+
 
     console.warn("⚠️ No personalized matches — returning fallback.");
     const fallback = await Course.find({ isPublished: true })

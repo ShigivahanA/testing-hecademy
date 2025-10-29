@@ -186,7 +186,27 @@ def get_hybrid_recommendations(user, courses):
         else:
             top_courses = course_df.head(5)
         print("⚠️ Cold start: returning top-rated/newest courses.")
-        return top_courses.to_dict(orient="records")
+        # 🧼 Clean and validate IDs before returning
+        records = top_courses.to_dict(orient="records")
+
+        cleaned_records = []
+        for r in records:
+            cid = clean_object_id(r.get("_id", ""))
+            if not cid or "fallback" in cid or len(cid) < 10:  # filter invalid
+                continue  # skip fake IDs
+            r["_id"] = cid
+            cleaned_records.append(r)
+
+        if not cleaned_records:
+            print("⚠️ No valid course IDs found — returning top 5 by createdAt.")
+            records = course_df.sort_values("createdAt", ascending=False).head(5).to_dict(orient="records")
+            cleaned_records = []
+            for r in records:
+                r["_id"] = clean_object_id(r.get("_id", ""))
+                cleaned_records.append(r)
+
+        return cleaned_records
+
 
     # ------------------------------
     # 🏁 Step 7: Rank + Clean IDs

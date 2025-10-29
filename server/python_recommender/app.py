@@ -1,5 +1,5 @@
 # ===========================================
-# 🚀 Hecademy Hybrid Recommender Service (v1.7 – Intelligent Match Upgrade)
+# 🚀 Hecademy Hybrid Recommender Service (v1.8 – Semantic + Progression Edition)
 # ===========================================
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
@@ -14,14 +14,15 @@ import os
 import traceback
 import json
 import time
+import re
 
 # ======================
 # ⚙️ FastAPI setup
 # ======================
 app = FastAPI(
     title="Hecademy Hybrid Recommender API",
-    description="Upgraded hybrid recommender with behavioral weighting and exclusion logic.",
-    version="1.7"
+    description="Hybrid engine with semantic topic alignment, progression logic, and activity weighting.",
+    version="1.8"
 )
 
 app.add_middleware(
@@ -43,7 +44,7 @@ class RecommendationRequest(BaseModel):
 
 
 # ======================
-# 🧩 Helper — Universal ID Extractor
+# 🧩 Universal ID Extractor
 # ======================
 def extract_id(value):
     if value is None:
@@ -82,39 +83,50 @@ def deep_clean_ids(obj):
 
 
 # ======================
+# 🧩 Cluster Mapping for Topics
+# ======================
+topic_clusters = {
+    "ai": ["artificial intelligence", "machine learning", "deep learning"],
+    "data": ["data science", "data analysis", "data visualization"],
+    "cyber": ["cybersecurity", "network security", "ethical hacking"],
+    "marketing": ["digital marketing", "seo", "social media", "content marketing"],
+    "frontend": ["web development", "frontend", "html", "css", "javascript", "react"],
+    "backend": ["backend", "node", "express", "fullstack", "mongodb", "api"],
+    "design": ["ui/ux", "figma", "adobe xd", "design systems"],
+    "career": ["career", "freelancing", "portfolio", "certifications"],
+    "entrepreneur": ["startup", "entrepreneurship", "business", "project management"]
+}
+
+def detect_course_topic(text):
+    """Roughly infer a course's dominant topic cluster from its title/description."""
+    text = text.lower()
+    for cluster, keywords in topic_clusters.items():
+        if any(k in text for k in keywords):
+            return cluster
+    return "general"
+
+def detect_user_topics(user):
+    prefs = user.get("preferences", {})
+    text = " ".join(prefs.get("topics", []) + prefs.get("goals", []))
+    mapped = set()
+    for cluster, keywords in topic_clusters.items():
+        if any(k in text.lower() for k in keywords):
+            mapped.add(cluster)
+    return mapped or {"general"}
+
+
+# ======================
 # 🧩 Normalize User Preferences
 # ======================
 def normalize_user_text(user):
     prefs = user.get("preferences", {})
     topics = [t.lower().strip() for t in prefs.get("topics", [])]
     goals = [g.lower().strip() for g in prefs.get("goals", [])]
-
-    clusters = {
-        "ai": ["artificial intelligence", "machine learning", "deep learning"],
-        "data": ["data science", "data analysis", "data visualization"],
-        "cyber": ["cybersecurity", "network security", "ethical hacking"],
-        "marketing": ["digital marketing", "seo", "social media", "content marketing"],
-        "frontend": ["web development", "frontend", "html", "css", "javascript", "react"],
-        "backend": ["backend", "node", "express", "fullstack", "mongodb"],
-        "design": ["ui/ux", "figma", "adobe xd", "design systems"],
-        "career": ["career", "freelancing", "portfolio", "certifications"],
-        "entrepreneur": ["startup", "entrepreneurship", "business", "project management"]
-    }
-
-    mapped = []
-    for word in topics + goals:
-        for key, group in clusters.items():
-            if any(g in word for g in group):
-                mapped.append(key)
-                break
-        else:
-            mapped.append(word)
-
-    return " ".join(set(mapped)) or "learning education"
+    return " ".join(set(topics + goals)) or "learning education"
 
 
 # ======================
-# 🧩 Advanced Recommendation Engine
+# 🧩 Smart Hybrid Recommendation Logic
 # ======================
 def get_hybrid_recommendations(user, courses):
     start_time = time.time()
@@ -122,22 +134,18 @@ def get_hybrid_recommendations(user, courses):
     print(f"🧠 User Preferences: {json.dumps(user.get('preferences', {}), indent=2)}")
     print(f"📚 Received {len(courses)} courses from Node.")
 
-    # 🧼 Clean IDs
     courses = deep_clean_ids(courses)
-    if len(courses) == 0:
+    if not courses:
         print("⚠️ No courses provided.")
         return []
 
     course_df = pd.DataFrame(courses)
     course_df["_id"] = course_df["_id"].astype(str)
-    if "difficulty" not in course_df.columns:
-        course_df["difficulty"] = ""
-
-    # Combine course text for TF-IDF
-    for col in ["courseTitle", "courseDescription", "tags"]:
+    for col in ["courseTitle", "courseDescription", "tags", "difficulty"]:
         if col not in course_df.columns:
             course_df[col] = ""
 
+    # Combine textual data
     course_df["tags"] = course_df["tags"].apply(lambda x: x if isinstance(x, list) else [])
     course_df["combined_text"] = (
         course_df["courseTitle"].astype(str)
@@ -147,7 +155,7 @@ def get_hybrid_recommendations(user, courses):
         + course_df["tags"].apply(lambda x: " ".join(x))
     )
 
-    # 🧠 Create vector representations
+    # Vectorization
     vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), max_features=8000)
     tfidf_matrix = vectorizer.fit_transform(course_df["combined_text"])
     user_text = normalize_user_text(user)
@@ -157,13 +165,9 @@ def get_hybrid_recommendations(user, courses):
     print(f"📊 TF-IDF Matrix shape: {tfidf_matrix.shape}")
     print(f"🧠 User Vector Features: {np.count_nonzero(user_vector.toarray())}")
 
-    # ==============================
-    # 🤝 Enhanced Collaborative + Activity Weighting
-    # ==============================
+    # Collaborative Filtering via user activity
     logs = user.get("activityLog", [])
     cf_scores = np.zeros(len(course_df))
-
-    # Activity weights
     action_weights = {
         "viewed": 0.3,
         "watched": 0.5,
@@ -171,13 +175,10 @@ def get_hybrid_recommendations(user, courses):
         "completed_quiz": 1.2,
         "completed_course": 1.8,
     }
-
     if logs:
         log_df = pd.DataFrame([
-            {
-                "courseId": extract_id(l.get("courseId")),
-                "score": action_weights.get(l.get("action", "").lower(), 0.4),
-            }
+            {"courseId": extract_id(l.get("courseId")),
+             "score": action_weights.get(l.get("action", "").lower(), 0.4)}
             for l in logs
         ])
         log_df = log_df.groupby("courseId")["score"].mean().reset_index()
@@ -186,16 +187,12 @@ def get_hybrid_recommendations(user, courses):
             if not match.empty:
                 cf_scores[idx] = match["score"].values[0]
 
-    # ==============================
-    # ⚖️ Smart Hybrid Scoring Logic
-    # ==============================
-    # Balance content + collaborative + difficulty + topicality
+    # Weighted hybrid scoring
     content_weight = 0.65
     collab_weight = 0.35
-
     hybrid_scores = (content_weight * content_scores) + (collab_weight * cf_scores)
 
-    # Difficulty match boost
+    # Difficulty alignment boost
     preferred_diff = user.get("preferences", {}).get("difficulty", "")
     if preferred_diff:
         diff_boost = course_df["difficulty"].apply(
@@ -203,28 +200,41 @@ def get_hybrid_recommendations(user, courses):
         )
         hybrid_scores *= diff_boost
 
-    # ==============================
-    # 🚫 Exclude Already Enrolled / Completed
-    # ==============================
-    enrolled_ids = set(str(extract_id(c.get("_id"))) for c in user.get("enrolledCourses", []))
-    completed_ids = set(
-        extract_id(l.get("courseId")) for l in logs if l.get("action") == "completed_course"
+    # Detect and penalize unrelated topics
+    user_clusters = detect_user_topics(user)
+    course_df["course_cluster"] = course_df["combined_text"].apply(detect_course_topic)
+    topic_penalty = course_df["course_cluster"].apply(
+        lambda c: 0.6 if c not in user_clusters else 1.0
     )
-    exclude_ids = enrolled_ids.union(completed_ids)
+    hybrid_scores *= topic_penalty
 
+    # 🚫 Exclude already enrolled/completed courses
+    enrolled_ids = set(str(extract_id(c.get("_id"))) for c in user.get("enrolledCourses", []))
+    completed_ids = set(extract_id(l.get("courseId")) for l in logs if l.get("action") == "completed_course")
+    exclude_ids = enrolled_ids.union(completed_ids)
+    before_filter = len(course_df)
     course_df["score"] = hybrid_scores
     course_df = course_df[~course_df["_id"].isin(exclude_ids)]
-    print(f"🚫 Excluded {len(exclude_ids)} enrolled/completed courses.")
+    print(f"🚫 Excluded {len(exclude_ids)} enrolled/completed courses ({before_filter - len(course_df)} removed).")
 
-    if course_df.empty:
-        print("⚠️ All recommended courses were filtered out. Returning fallback.")
-        return []
+    # 🧩 Progression Boost: favor next-level courses
+    def progression_boost(row):
+        title = row["courseTitle"].lower()
+        if any(k in title for k in ["advanced", "pro", "expert", "next level"]):
+            return 1.3
+        if any(k in title for k in ["beginner", "intro", "fundamentals"]) and any(e in title for e in ["javascript", "html", "css"]):
+            # If user already learned basics, lower these
+            if "frontend" in user_clusters or "backend" in user_clusters:
+                return 0.5
+        return 1.0
 
-    # Rank & pick top
+    progression_weights = course_df.apply(progression_boost, axis=1)
+    course_df["score"] *= progression_weights
+
+    # Sort and select top 5
     top = course_df.sort_values("score", ascending=False).head(5)
     recs = top.to_dict(orient="records")
 
-    # Clean IDs for output
     for r in recs:
         r["_id"] = extract_id(r.get("_id", ""))
 
@@ -232,7 +242,7 @@ def get_hybrid_recommendations(user, courses):
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user.get("preferences", {}).get("topics", []))
     print("User Goals:", user.get("preferences", {}).get("goals", []))
-    print("Preferred Difficulty:", preferred_diff)
+    print("User Topic Clusters:", list(user_clusters))
     for r in recs:
         print(f"   {r['_id']} → {r.get('courseTitle', '')[:60]} ({round(r.get('score', 0), 4)})")
     print("========================================")
@@ -270,5 +280,5 @@ async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Heade
 # ======================
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5001))
-    print(f"🚀 Starting Hecademy Hybrid Recommender v1.7 on port {port}")
+    print(f"🚀 Starting Hecademy Hybrid Recommender v1.8 on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)

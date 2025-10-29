@@ -44,7 +44,7 @@ const PreferenceModal = ({ onClose }) => {
       setUserData(data.user);
 
       // 🧠 Step 2: Refetch updated user data (from backend)
-      await fetchUserData();
+      // await fetchUserData();
 
       // 🧠 Step 3: Trigger new recommendations
       await fetchRecommendations();

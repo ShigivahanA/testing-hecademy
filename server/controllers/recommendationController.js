@@ -4,7 +4,7 @@ import Course from "../models/Course.js";
 
 const PYTHON_API = process.env.RECOMMENDER_API_URL || "http://127.0.0.1:5001";
 
-/* 🧹 Helper — recursively clean Mongo ObjectIDs / numeric wrappers */
+/* 🧹 Clean MongoDB-style objects deeply */
 function cleanMongoObject(obj) {
   if (!obj || typeof obj !== "object") return obj;
   if (obj.$oid) return obj.$oid;
@@ -20,8 +20,6 @@ function cleanMongoObject(obj) {
 export const getRecommendations = async (req, res) => {
   try {
     const userId = req.auth.userId;
-
-    // ⚡ Always get fresh user data with courses
     const userDoc = await User.findOne({ _id: userId })
       .populate("enrolledCourses")
       .lean();
@@ -32,7 +30,6 @@ export const getRecommendations = async (req, res) => {
     console.log("🧠 Live User Preferences (fresh from DB):", userDoc.preferences);
     console.log("👤 Enrolled Courses:", userDoc.enrolledCourses?.length || 0);
 
-    // 🧩 Preserve preferences BEFORE cleaning
     const preservedPreferences = {
       topics: Array.isArray(userDoc.preferences?.topics)
         ? [...userDoc.preferences.topics]
@@ -43,54 +40,44 @@ export const getRecommendations = async (req, res) => {
       difficulty: userDoc.preferences?.difficulty || "",
     };
 
-    // 🔧 Clean MongoDB formatting
     const user = cleanMongoObject(userDoc);
     const allCourses = await Course.find({ isPublished: true }).lean();
     const courses = allCourses.map((c) => cleanMongoObject(c));
 
     const enrolledCoursesArray = Array.isArray(user.enrolledCourses)
       ? user.enrolledCourses
-      : user.enrolledCourses
-      ? Object.values(user.enrolledCourses)
-      : [];
+      : Object.values(user.enrolledCourses || {});
 
-    // ✅ Restore preserved preferences (if valid)
     user.preferences = { ...preservedPreferences };
 
-    // ✅ Only fill missing values if empty
-    if (!Array.isArray(user.preferences.topics) || user.preferences.topics.length === 0) {
+    if (!user.preferences.topics?.length) {
       const topicPool = [];
-      enrolledCoursesArray.forEach((course) => {
-        if (course.courseTags?.length) topicPool.push(...course.courseTags);
-        else if (course.courseTitle)
-          topicPool.push(...course.courseTitle.split(" "));
+      enrolledCoursesArray.forEach((c) => {
+        if (c.courseTags?.length) topicPool.push(...c.courseTags);
+        else if (c.courseTitle)
+          topicPool.push(...c.courseTitle.split(" "));
       });
       user.preferences.topics = [...new Set(topicPool.map((t) => t.toLowerCase()))].slice(0, 5);
     }
 
-    if (!Array.isArray(user.preferences.goals) || user.preferences.goals.length === 0) {
+    if (!user.preferences.goals?.length)
       user.preferences.goals = ["skill improvement", "career growth"];
-    }
 
-    if (!user.preferences.difficulty) {
+    if (!user.preferences.difficulty)
       user.preferences.difficulty = "intermediate";
-    }
 
-    // 🧩 Add fallback activity logs for new users
     if (!user.activityLog?.length && enrolledCoursesArray?.length) {
-      user.activityLog = enrolledCoursesArray.map((course) => ({
+      user.activityLog = enrolledCoursesArray.map((c) => ({
         action: "watched",
-        courseId: course._id,
+        courseId: c._id,
         details: {},
         timestamp: new Date(),
       }));
     }
 
-    // 🔍 Deep log before Python call
     console.log("🧩 Final Preferences Sent to Python:", user.preferences);
     console.log("📚 Activity Count:", user.activityLog?.length || 0);
 
-    // 🚀 Send to Python recommender
     const { data } = await axios.post(
       `${PYTHON_API}/recommend`,
       { user, courses },
@@ -105,63 +92,57 @@ export const getRecommendations = async (req, res) => {
       "courses"
     );
 
- if (data.success && data.recommended?.length > 0) {
-  const cleanedRecommendations = data.recommended
-    .map((course, i) => {
-      let cleanId = course._id;
+    if (data.success && data.recommended?.length > 0) {
+      const cleanedRecommendations = data.recommended
+        .map((course, i) => {
+          let cleanId = course._id;
+          try {
+            if (!cleanId) {
+              cleanId = course.id || course.courseId || "";
+            } else if (typeof cleanId === "object") {
+              if (cleanId.$oid) cleanId = cleanId.$oid;
+              else if (cleanId.buffer?.data)
+                cleanId = Buffer.from(cleanId.buffer.data).toString("hex");
+              else cleanId = JSON.stringify(cleanId);
+            }
 
-      try {
-        if (!cleanId) {
-          cleanId = course.id || course.courseId || "";
-        } else if (typeof cleanId === "object") {
-          if (cleanId.$oid) cleanId = cleanId.$oid;
-          else if (cleanId.buffer?.data)
-            cleanId = Buffer.from(cleanId.buffer.data).toString("hex");
-          else cleanId = JSON.stringify(cleanId);
-        }
+            cleanId = String(cleanId).trim();
 
-        cleanId = String(cleanId).trim();
+            if (!cleanId || cleanId.includes("object") || cleanId.length < 10) {
+              console.warn(`⚠️ Skipping invalid ID for ${course.title || course.courseTitle}`);
+              return null;
+            }
+          } catch (err) {
+            console.warn(`⚠️ ID cleaning failed at index ${i}:`, err.message);
+            return null;
+          }
 
-        // ⚠️ Skip invalid ones
-        if (
-          !cleanId ||
-          cleanId.includes("object") ||
-          cleanId.startsWith("fallback_") ||
-          cleanId.length < 10
-        )
-          return null;
-      } catch (err) {
-        console.warn(`⚠️ ID cleaning failed for course index ${i}:`, err.message);
-        return null;
+          return { ...course, _id: cleanId };
+        })
+        .filter(Boolean);
+
+      console.log(
+        "🧼 Cleaned Recommendation IDs:",
+        cleanedRecommendations.map((c) => c._id)
+      );
+
+      if (cleanedRecommendations.length === 0) {
+        console.warn("⚠️ All recommended IDs invalid — fallback activated.");
+        const fallback = await Course.find({ isPublished: true })
+          .sort({ rating: -1, createdAt: -1 })
+          .limit(5)
+          .lean();
+        return res.json({
+          success: true,
+          recommended: fallback,
+          message: "Fallback returned (invalid IDs).",
+        });
       }
 
-      return { ...course, _id: cleanId };
-    })
-    .filter(Boolean); // remove nulls
+      return res.json({ success: true, recommended: cleanedRecommendations });
+    }
 
-  console.log(
-    "🧼 Cleaned Recommendation IDs:",
-    cleanedRecommendations.map((c) => c._id)
-  );
-
-  if (cleanedRecommendations.length === 0) {
-    console.warn("⚠️ All recommended IDs invalid, fetching fallback...");
-    const fallback = await Course.find({ isPublished: true })
-      .sort({ rating: -1, createdAt: -1 })
-      .limit(5)
-      .lean();
-    return res.json({
-      success: true,
-      recommended: fallback,
-      message: "Fallback returned because all recommendations had invalid IDs.",
-    });
-  }
-
-  return res.json({ success: true, recommended: cleanedRecommendations });
-}
-
-
-    console.warn("⚠️ No personalized matches — returning fallback.");
+    console.warn("⚠️ No personalized matches — fallback mode.");
     const fallback = await Course.find({ isPublished: true })
       .sort({ rating: -1, createdAt: -1 })
       .limit(5)
@@ -170,8 +151,7 @@ export const getRecommendations = async (req, res) => {
     return res.json({
       success: true,
       recommended: fallback,
-      message:
-        "No personalized matches found. Showing popular courses instead.",
+      message: "No personalized matches. Showing popular courses.",
     });
   } catch (err) {
     console.error("❌ Recommendation error:", err.message);
@@ -183,8 +163,7 @@ export const getRecommendations = async (req, res) => {
     return res.json({
       success: false,
       recommended: fallback,
-      message:
-        "Recommender service unavailable. Showing top courses temporarily.",
+      message: "Recommender service unavailable. Showing top courses.",
     });
   }
 };

@@ -89,50 +89,137 @@ export const assets = {
     lesson_icon,
 topics: [
   // 🔹 Programming & Development
-  "Web Development", "Frontend Development", "Backend Development",
-  "JavaScript", "React", "Node.js", "Fullstack Development",
+  "Web Development",
+  "Frontend Development",
+  "Backend Development",
+  "Fullstack Development",
+  "JavaScript",
+  "React",
+  "Node.js",
+  "HTML & CSS",
+  "Python Programming",
+  "APIs & Databases",
+  "Version Control (Git/GitHub)",
 
-  // 🔹 Data Science & AI
-  "Data Science", "Data Analysis", "Data Visualization",
-  "Artificial Intelligence", "Machine Learning", "Deep Learning",
-  "Applied AI", "Core Machine Learning", "AI in Industry",
+  // 🔹 Data Science & Analytics
+  "Data Science",
+  "Data Analysis",
+  "Data Visualization",
+  "Data Cleaning & Preprocessing",
+  "Business Intelligence (Power BI / Tableau)",
+  "Applied Data Science",
+  "Statistics for Data Science",
+  "Data Analytics Tools",
 
-  // 🔹 Cybersecurity
-  "Cybersecurity", "Ethical Hacking", "Security Practices",
-  "Applied Cybersecurity", "Network Security", "Cloud Security",
+  // 🔹 Artificial Intelligence & Machine Learning
+  "Artificial Intelligence",
+  "Machine Learning",
+  "Deep Learning",
+  "AI & ML Foundations",
+  "Core Machine Learning",
+  "Applied AI",
+  "Natural Language Processing (NLP)",
+  "Computer Vision",
+  "AI Ethics & Responsible AI",
+  "Model Deployment & MLOps",
 
-  // 🔹 Digital Marketing
-  "Digital Marketing", "SEO", "Social Media Marketing", 
-  "Content Marketing", "Marketing Strategy", "Analytics & Optimization",
+  // 🔹 Cybersecurity & Networking
+  "Cybersecurity",
+  "Ethical Hacking",
+  "Network Security",
+  "Cloud Security",
+  "Security Practices",
+  "Applied Cybersecurity",
+  "Threat Detection & Incident Response",
+  "Cryptography & Encryption",
+  "Zero Trust Architecture",
+
+  // 🔹 Digital Marketing & Business Growth
+  "Digital Marketing",
+  "SEO & SEM",
+  "Social Media Marketing",
+  "Content Marketing",
+  "Marketing Strategy",
+  "Analytics & Optimization",
+  "Email Marketing",
+  "Branding & Value Proposition",
+  "Marketing Automation",
+  "Performance Marketing",
 
   // 🔹 UI/UX & Design
-  "UI/UX Design", "UI Design", "UX Design",
-  "Web Design", "Prototyping", "Design Tools (Figma, Adobe XD)",
+  "UI/UX Design",
+  "Design Principles",
+  "Color Theory & Typography",
+  "Wireframing & Prototyping",
+  "UX Research",
+  "Interaction Design",
+  "Design Tools (Figma, Adobe XD)",
+  "Portfolio Building (UI/UX)",
+  "Accessibility & Usability",
+  "Visual Design Systems",
 
-  // 🔹 Career Skills
-  "Project Management", "Business Analytics", "Entrepreneurship"
+  // 🔹 Career & Professional Development
+  "Project Management",
+  "Business Analytics",
+  "Entrepreneurship",
+  "Freelancing Essentials",
+  "Portfolio Development",
+  "Career Development",
+  "Soft Skills for Tech Professionals",
+  "Presentation & Communication Skills",
+
+  // 🔹 Emerging & Interdisciplinary Tech
+  "Cloud Computing",
+  "DevOps",
+  "Blockchain Technology",
+  "Internet of Things (IoT)",
+  "AR/VR & Metaverse",
+  "Quantum Computing",
+  "Automation & Robotics",
+  "AI in Industry"
 ],
     goals: [
+  // 🔹 Career-Oriented
   "Career Growth",
   "Job Readiness",
-  "Skill Upgrade / Upskilling",
-  "Freelancing",
-  "Internship & Exam Preparation",
-  "Portfolio Building",
-  "Startup & Entrepreneurship",
-  "Personal Projects",
-  "Competitive Programming",
-  "Open Source Contribution",
-  "Certifications",
   "Switching Careers",
+  "Internship Preparation",
+  "Preparing for Tech Interviews",
   "Becoming Fullstack Developer",
-  "Specializing in AI / Data Science",
+  "Becoming Data Scientist",
+  "Becoming AI / ML Engineer",
   "Becoming Cybersecurity Expert",
   "Becoming UI/UX Designer",
   "Becoming Cloud Engineer",
-  "Preparing for Tech Interviews",
-  "Exploring Emerging Tech (Blockchain, AR/VR, IoT, Quantum)",
-  "Learning for Fun & Creativity"
+  "Becoming Digital Marketer",
+
+  // 🔹 Skill-Based
+  "Skill Upgrade / Upskilling",
+  "Learning Core Concepts",
+  "Practical Hands-On Learning",
+  "Portfolio Building",
+  "Certifications",
+  "Building Real Projects",
+  "Freelancing & Client Work",
+  "Developing Problem-Solving Skills",
+
+  // 🔹 Academic / Exam Related
+  "University or College Supplement",
+  "Exam Preparation",
+  "Academic Research Readiness",
+
+  // 🔹 Creative & Entrepreneurial
+  "Startup & Entrepreneurship",
+  "Building a Tech Startup",
+  "Exploring Creative Design",
+  "Building AI/Tech Products",
+  "Open Source Contribution",
+
+  // 🔹 Curiosity / Passion Driven
+  "Exploring Emerging Tech (AI, Blockchain, IoT, AR/VR, Quantum)",
+  "Learning for Fun & Curiosity",
+  "Personal Projects",
+  "Becoming Thought Leader in Tech"
 ]
 }
 

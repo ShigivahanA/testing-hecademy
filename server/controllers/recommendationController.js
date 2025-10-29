@@ -167,51 +167,53 @@ export const getRecommendations = async (req, res) => {
       "courses"
     );
 
+    // 🧾 LOG FULL RAW PYTHON RESPONSE (for debugging structure)
+    console.log("🧾 Raw Python Response:", JSON.stringify(data, null, 2));
+
     // 🧼 Handle and clean recommender response
-    if (data.success && data.recommended?.length > 0) {
+    if (data.success && Array.isArray(data.recommended) && data.recommended.length > 0) {
       const cleanedRecommendations = data.recommended
         .map((course, i) => {
-  let cleanId = course._id;
+          let cleanId = course._id;
 
-    try {
-    // ✅ Case 1: if it's already a valid string — keep it.
-    if (typeof cleanId === "string" && cleanId.trim().length >= 12) {
-      cleanId = cleanId.trim();
-    }
+          try {
+            // ✅ Case 1: if it's already a valid string — keep it.
+            if (typeof cleanId === "string" && cleanId.trim().length >= 12) {
+              cleanId = cleanId.trim();
+            }
 
-    // ✅ Case 2: handle object-based or buffer IDs.
-    else if (typeof cleanId === "object" && cleanId !== null) {
-      if (cleanId.$oid) cleanId = cleanId.$oid;
-      else if (cleanId._id?.$oid) cleanId = cleanId._id.$oid;
-      else if (cleanId.buffer?.data)
-        cleanId = Buffer.from(cleanId.buffer.data).toString("hex");
-      else if (cleanId.courseId) cleanId = cleanId.courseId;
-      else cleanId = "";
-    }
+            // ✅ Case 2: handle object-based or buffer IDs.
+            else if (typeof cleanId === "object" && cleanId !== null) {
+              if (cleanId.$oid) cleanId = cleanId.$oid;
+              else if (cleanId._id?.$oid) cleanId = cleanId._id.$oid;
+              else if (cleanId.buffer?.data)
+                cleanId = Buffer.from(cleanId.buffer.data).toString("hex");
+              else if (cleanId.courseId) cleanId = cleanId.courseId;
+              else cleanId = "";
+            }
 
-    // ✅ Ensure it's a string now
-    cleanId = String(cleanId || "").trim();
+            // ✅ Ensure it's a string now
+            cleanId = String(cleanId || "").trim();
 
-    // 🚫 Skip invalid or malformed IDs
-    if (
-      !cleanId ||
-      cleanId.length < 10 ||
-      cleanId.toLowerCase().includes("object") ||
-      cleanId.toLowerCase().includes("none") ||
-      cleanId.toLowerCase().includes("nan") ||
-      cleanId === "{}"
-    ) {
-      console.warn(`⚠️ Skipping invalid course ID at index ${i}:`, cleanId);
-      return null;
-    }
-  } catch (err) {
-    console.warn(`⚠️ ID cleaning failed for course index ${i}:`, err.message);
-    return null;
-  }
+            // 🚫 Skip invalid or malformed IDs
+            if (
+              !cleanId ||
+              cleanId.length < 10 ||
+              cleanId.toLowerCase().includes("object") ||
+              cleanId.toLowerCase().includes("none") ||
+              cleanId.toLowerCase().includes("nan") ||
+              cleanId === "{}"
+            ) {
+              console.warn(`⚠️ Skipping invalid course ID at index ${i}:`, cleanId);
+              return null;
+            }
+          } catch (err) {
+            console.warn(`⚠️ ID cleaning failed for course index ${i}:`, err.message);
+            return null;
+          }
 
-  return { ...course, _id: cleanId };
-})
-
+          return { ...course, _id: cleanId };
+        })
         .filter(Boolean);
 
       console.log(

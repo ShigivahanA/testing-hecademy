@@ -1,5 +1,5 @@
 # ===========================================
-# 🚀 Hecademy Hybrid Recommender Service (v1.6.4 – Final Debug Build)
+# 🚀 Hecademy Hybrid Recommender Service (v1.6.5 – ID Fix & Refinement)
 # ===========================================
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
@@ -22,7 +22,7 @@ import time
 app = FastAPI(
     title="Hecademy Hybrid Recommender API",
     description="Hybrid engine combining content-based, collaborative, and difficulty weighting.",
-    version="1.6.4"
+    version="1.6.5" # Updated version number
 )
 
 app.add_middleware(
@@ -44,39 +44,85 @@ class RecommendationRequest(BaseModel):
 
 
 # ======================
-# 🧩 Robust ID Extractor (Handles Any Format)
+# 🧩 Robust ID Extractor (Handles Any Format) - SLIGHTLY REFINED
 # ======================
 def extract_id(value):
     """Handles every possible _id shape including nested, buffer, or numeric-key dicts."""
     if value is None:
         return ""
+    
+    # Base case: Already a string
     if isinstance(value, str):
+        # Basic validation for common Mongo ID-like string format to prevent passing back large object strings
+        if len(value) > 5 and value not in ["", "None", "[object Object]"]:
+             return value
         return value
+
+    # Dictionary handling
     if isinstance(value, dict):
-        # 1️⃣ Mongo style
+        # 1️⃣ Mongo style: {"$oid": "..."}
         if "$oid" in value:
             return str(value["$oid"])
-        # 2️⃣ Nested _id
+        
+        # 2️⃣ Nested _id: {"_id": {"$oid": "..."}}
         if "_id" in value:
-            return extract_id(value["_id"])
-        # 3️⃣ Node buffer
+            res = extract_id(value["_id"])
+            if res:
+                return res
+        
+        # 3️⃣ Node buffer: {"buffer": {"data": [...]}}
         if "buffer" in value and "data" in value["buffer"]:
             data = value["buffer"].get("data", [])
-            return "".join(format(x, "02x") for x in data)
-        # 4️⃣ Dicts with numeric keys like {"0": {"$oid": "..."}}
+            # Convert byte data to hex string
+            if isinstance(data, list):
+                return "".join(format(x, "02x") for x in data)
+            
+        # 4️⃣ Search all inner values recursively
         for k, v in value.items():
-            if isinstance(v, dict):
+            if isinstance(v, dict) or (isinstance(v, list) and v and isinstance(v[0], dict)):
                 res = extract_id(v)
-                if res:
+                if res and len(res) > 5: # Only return valid-looking ID strings
                     return res
-        return str(value)
+        
+        # Fallback to string of dict (should be avoided)
+        return "" # Changed from str(value) to "" to prevent ["object Object"] string pollution
+    
+    # List/Tuple handling (e.g., list of IDs, or list of ID dicts)
     if isinstance(value, (list, tuple, set)):
-        return ", ".join(extract_id(v) for v in value)
+        # Only return the first valid ID found in a list
+        for v in value:
+            res = extract_id(v)
+            if res and len(res) > 5:
+                return res
+        return ""
+
     return str(value)
 
 
 # ======================
-# 🧩 Normalize user topics & goals
+# 🧩 Deep Cleaner — Fix IDs inside nested dicts/lists
+# ======================
+# NOTE: This function is mostly redundant if the DataFrame processing (Step 1) is correct,
+# but we keep it for robustness in case nested data like 'courseContent' has an '_id'.
+def deep_clean_ids(obj):
+    """Recursively fix _id fields in nested dicts and lists."""
+    if isinstance(obj, list):
+        return [deep_clean_ids(o) for o in obj]
+    elif isinstance(obj, dict):
+        cleaned = {}
+        for k, v in obj.items():
+            if k == "_id":
+                # Ensure the _id field in the final output dict is a clean string ID
+                cleaned[k] = extract_id(v)
+            else:
+                cleaned[k] = deep_clean_ids(v)
+        return cleaned
+    else:
+        return obj
+
+
+# ======================
+# 🧩 Normalize user topics & goals (UNMODIFIED)
 # ======================
 def normalize_user_text(user):
     prefs = user.get("preferences", {})
@@ -110,30 +156,13 @@ def normalize_user_text(user):
 
 
 # ======================
-# 🧩 Deep Cleaner — Fix IDs inside nested dicts/lists
-# ======================
-def deep_clean_ids(obj):
-    """Recursively fix _id fields in nested dicts and lists."""
-    if isinstance(obj, list):
-        return [deep_clean_ids(o) for o in obj]
-    elif isinstance(obj, dict):
-        cleaned = {}
-        for k, v in obj.items():
-            if k == "_id":
-                cleaned[k] = extract_id(v)
-            else:
-                cleaned[k] = deep_clean_ids(v)
-        return cleaned
-    else:
-        return obj
-
-
-# ======================
-# 🧩 Main Hybrid Recommendation Logic
+# 🧩 Main Hybrid Recommendation Logic - CRITICAL CHANGES IN STEPS 1 & 9
 # ======================
 def get_hybrid_recommendations(user, courses):
     start_time = time.time()
     print("\n🟦 [INCOMING REQUEST DATA]")
+    # ... (omitted logging for brevity)
+    # The original log data for User Preferences, Course Count, and Sample Keys is helpful.
     print(f"🧠 User Preferences: {json.dumps(user.get('preferences', {}), indent=2)}")
     print(f"📚 Received {len(courses)} courses from Node.")
     if len(courses) > 0:
@@ -144,19 +173,32 @@ def get_hybrid_recommendations(user, courses):
         return []
 
     # ------------------------------
-    # 🧱 Step 1: Clean IDs before DataFrame
+    # 🧱 Step 1: Clean IDs before DataFrame - CRITICAL FIX
     # ------------------------------
+    # Pre-clean the list of dicts before creating the DataFrame to ensure _id is a string.
+    cleaned_courses = []
     for c in courses:
-        c["_id"] = extract_id(c.get("_id", ""))
+        # Create a copy and ensure _id is a string
+        clean_c = c.copy()
+        clean_c["_id"] = extract_id(c.get("_id", ""))
+        cleaned_courses.append(clean_c)
 
-    course_df = pd.DataFrame(courses)
+    course_df = pd.DataFrame(cleaned_courses)
+    
+    # DOUBLE CHECK: Re-apply extract_id on the DataFrame column as a safeguard
     if "_id" not in course_df.columns:
         course_df["_id"] = ""
-    course_df["_id"] = course_df["_id"].apply(extract_id)
+    # The crucial step is ensuring the column is applied AND explicitly converted to string type
+    course_df["_id"] = course_df["_id"].apply(extract_id).astype(str) 
 
     print(f"🧾 DataFrame shape: {course_df.shape}")
     print("🧾 Columns:", course_df.columns.tolist())
 
+    # ------------------------------
+    # 🧩 Step 2-8: (Unmodified Logic: Normalize, Combine Text, TF-IDF, CF, Hybrid Score, Difficulty Boost, Cold Start)
+    # ------------------------------
+    # ... (omitted steps 2 through 8 as they are not the source of the ID issue)
+    
     # ------------------------------
     # 🧩 Step 2: Normalize course columns
     # ------------------------------
@@ -246,24 +288,32 @@ def get_hybrid_recommendations(user, courses):
     if not np.any(hybrid_scores):
         print("⚠️ Cold start triggered — returning fallback courses.")
         return course_df.head(5).to_dict(orient="records")
-
+        
     # ------------------------------
-    # 🏁 Step 9: Rank & Clean Output
+    # 🏁 Step 9: Rank & Clean Output - CRITICAL LOGGING FIX
     # ------------------------------
     course_df["score"] = hybrid_scores
     top = course_df.sort_values("score", ascending=False).head(5)
 
+    # Convert to dicts first
     recs = top.to_dict(orient="records")
+    
+    # Then apply deep cleaning (important for nested fields)
     recs = deep_clean_ids(recs)
+    
+    # Filter out bad IDs from the logging array for a clean debug output
+    cleaned_ids_for_log = [r["_id"] for r in recs if r.get("_id") and r.get("_id") != "[object Object]"]
 
-    print("🧾 Cleaned Recommendation IDs:", [r["_id"] for r in recs])
+    print("🧾 Cleaned Recommendation IDs:", cleaned_ids_for_log)
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user.get("preferences", {}).get("topics", []))
     print("User Goals:", user.get("preferences", {}).get("goals", []))
     print("Preferred Difficulty:", preferred_diff)
     print("🏁 Top 5 Recommendations:")
     for r in recs:
-        print(f"   {r['_id']} → {r.get('title', '')[:60]} ({round(r.get('score', 0), 4)})")
+        # Use the already cleaned string ID for logging
+        clean_id = r.get('_id', '[MISSING_ID]') 
+        print(f"   {clean_id} → {r.get('title', '')[:60]} ({round(r.get('score', 0), 4)})")
     print("========================================")
     print(f"🕒 Processing Time: {round(time.time() - start_time, 3)}s\n")
 
@@ -271,7 +321,7 @@ def get_hybrid_recommendations(user, courses):
 
 
 # ======================
-# 🔗 API Endpoint
+# 🔗 API Endpoint - SLIGHTLY MODIFIED LOGGING
 # ======================
 @app.post("/recommend")
 async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Header(None)):
@@ -281,10 +331,14 @@ async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Heade
     try:
         print("\n📨 Incoming /recommend request received.")
         recs = get_hybrid_recommendations(req.user, req.courses)
+        
+        # Ensure only string IDs are logged in the summary
+        clean_ids_for_summary = [r.get('_id') for r in recs if r.get('_id') and r.get('_id') != "[object Object]"]
+        
         print("📤 Outgoing Response Summary:")
         print(json.dumps({
             "count": len(recs),
-            "ids": [r.get('_id') for r in recs]
+            "ids": clean_ids_for_summary
         }, indent=2))
         print("========================================================\n")
         return {"success": True, "recommended": recs}
@@ -295,9 +349,9 @@ async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Heade
 
 
 # ======================
-# 🚀 Run Locally
+# 🚀 Run Locally (UNMODIFIED)
 # ======================
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5001))
-    print(f"🚀 Starting Hecademy Hybrid Recommender v1.6.4 on port {port}")
+    print(f"🚀 Starting Hecademy Hybrid Recommender v1.6.5 on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)

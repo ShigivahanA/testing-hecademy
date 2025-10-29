@@ -43,22 +43,35 @@ class RecommendationRequest(BaseModel):
 
 
 # ======================
-# 🧩 Helper — Clean IDs safely
+# 🧩 Helper — Clean IDs safely (robust version)
 # ======================
 def clean_object_id(value):
-    """Ensure Mongo-like ObjectIDs or Buffers become plain strings."""
+    """Ensure Mongo-like ObjectIDs, Buffers, or dicts become clean strings."""
+    if value is None:
+        return ""
+    # if it's a dict from Mongo
     if isinstance(value, dict):
         if "$oid" in value:
             return str(value["$oid"])
+        elif "_id" in value:
+            return clean_object_id(value["_id"])
+        elif "courseId" in value:
+            return clean_object_id(value["courseId"])
         elif "buffer" in value and "data" in value["buffer"]:
-            # Convert Buffer data (list of bytes) to hex string
             data = value["buffer"].get("data", [])
             try:
                 return "".join(format(x, "02x") for x in data)
             except Exception:
                 return str(data)
         else:
+            # catch any nested dict with possible $oid inside
+            for k, v in value.items():
+                if isinstance(v, dict) and "$oid" in v:
+                    return str(v["$oid"])
             return str(value)
+    # if it's an ObjectId-like string
+    if isinstance(value, str) and len(value) == 24 and all(c in "0123456789abcdef" for c in value.lower()):
+        return value
     return str(value)
 
 

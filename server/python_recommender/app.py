@@ -1,5 +1,5 @@
 # ===========================================
-# 🚀 Hecademy Hybrid Recommender Service (v1.5.1)
+# 🚀 Hecademy Hybrid Recommender Service (v1.5.2)
 # ===========================================
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
@@ -13,6 +13,7 @@ import uvicorn
 import os
 import traceback
 import re
+import ast  # ✅ to safely parse stringified dicts
 
 # ======================
 # ⚙️ FastAPI setup
@@ -20,7 +21,7 @@ import re
 app = FastAPI(
     title="Hecademy Hybrid Recommender API",
     description="Hybrid engine combining content-based, collaborative, and difficulty weighting.",
-    version="1.5.1"
+    version="1.5.2"
 )
 
 app.add_middleware(
@@ -42,53 +43,55 @@ class RecommendationRequest(BaseModel):
 
 
 # ======================
-# 🧩 Helper — Clean IDs safely (enhanced & robust)
+# 🧩 Helper — Clean IDs safely (final, robust version)
 # ======================
 def clean_object_id(value):
-    """Ensure Mongo-like ObjectIDs, Buffers, or dicts become consistent 24-char hex strings."""
+    """Ensure Mongo-like ObjectIDs, Buffers, or stringified dicts become consistent 24-char hex strings."""
     try:
         if value is None:
             return ""
 
-        # Handle dicts that wrap ObjectId-like data
+        # 🧠 If it's a stringified dict, safely parse it first
+        if isinstance(value, str) and value.strip().startswith("{") and "$oid" in value:
+            try:
+                parsed = ast.literal_eval(value)
+                if isinstance(parsed, dict):
+                    value = parsed
+            except Exception:
+                pass  # if parsing fails, continue with raw string
+
+        # 🧩 Handle dicts containing Mongo formats
         if isinstance(value, dict):
             if "$oid" in value:
                 return str(value["$oid"])
-            elif "_id" in value and isinstance(value["_id"], dict):
-                # Handle nested { "_id": {"$oid": "..." } }
-                inner = value["_id"]
-                if "$oid" in inner:
-                    return str(inner["$oid"])
-            elif "courseId" in value:
-                return clean_object_id(value["courseId"])
+            elif "_id" in value:
+                return clean_object_id(value["_id"])
             elif "buffer" in value and "data" in value["buffer"]:
-                # Handle Buffer -> hex conversion
                 data = value["buffer"].get("data", [])
                 try:
                     hexid = "".join(format(x, "02x") for x in data)
-                    if len(hexid) == 24:
-                        return hexid
-                    return ""
+                    return hexid if len(hexid) == 24 else ""
                 except Exception:
                     return ""
-            else:
-                # recursively find any nested $oid
-                for k, v in value.items():
-                    if isinstance(v, dict) and "$oid" in v:
-                        return str(v["$oid"])
-                return str(value)
+            elif "courseId" in value:
+                return clean_object_id(value["courseId"])
 
-        # Handle string ObjectId
+        # 🧩 Handle plain ObjectId strings
         if isinstance(value, str):
             val = value.strip()
+            # if looks like hex ObjectId
             if len(val) == 24 and all(c in "0123456789abcdef" for c in val.lower()):
                 return val
+            # if still contains $oid inside the string (edge case)
+            match = re.search(r"'?\$oid'?:\s*'([0-9a-f]{24})'", val)
+            if match:
+                return match.group(1)
             return val
 
-        # Handle unexpected types (int, float, etc.)
+        # fallback
         return str(value)
     except Exception as e:
-        print(f"⚠️ clean_object_id error: {e}")
+        print(f"⚠️ clean_object_id error: {e} | value={value}")
         return ""
 
 
@@ -96,7 +99,6 @@ def clean_object_id(value):
 # 🧩 Normalize user topics & goals
 # ======================
 def normalize_user_text(user):
-    """Normalize messy topic/goal words into semantic clusters for TF-IDF."""
     prefs = user.get("preferences", {})
     topics = [t.lower().strip() for t in prefs.get("topics", [])]
     goals = [g.lower().strip() for g in prefs.get("goals", [])]
@@ -135,11 +137,9 @@ def get_hybrid_recommendations(user, courses):
         print("⚠️ No courses provided.")
         return []
 
-    # ------------------------------
-    # 🧱 Step 1: Normalize course data
-    # ------------------------------
     course_df = pd.DataFrame(courses)
 
+    # normalize column names
     def normalize_column(df, old, new):
         if old in df.columns and new not in df.columns:
             df[new] = df[old]
@@ -148,11 +148,14 @@ def get_hybrid_recommendations(user, courses):
     normalize_column(course_df, "courseDescription", "description")
     normalize_column(course_df, "courseTags", "tags")
 
-    # 🔧 Clean all IDs safely
+    # 🧹 Clean all IDs safely
     if "_id" in course_df.columns:
         course_df["_id"] = course_df["_id"].apply(clean_object_id)
 
-    # Fill missing columns
+    # sanity log: show first 3 course IDs received
+    print("🧩 First 3 course IDs received:", list(course_df["_id"].head(3)))
+
+    # fill missing cols
     for col in ["title", "description", "tags", "difficulty"]:
         if col not in course_df.columns:
             course_df[col] = ""
@@ -164,42 +167,31 @@ def get_hybrid_recommendations(user, courses):
         course_df["tags"].apply(lambda x: " ".join(x))
     )
 
-    # ------------------------------
-    # 🧩 Step 2: Content-Based Filtering
-    # ------------------------------
+    # content-based similarity
     vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), max_features=7000)
     tfidf_matrix = vectorizer.fit_transform(course_df["combined_text"])
-
     user_text = normalize_user_text(user)
     user_vector = vectorizer.transform([user_text])
     content_scores = cosine_similarity(user_vector, tfidf_matrix).flatten()
 
-    # ------------------------------
-    # 🤝 Step 3: Collaborative Filtering
-    # ------------------------------
+    # collaborative filtering
     logs = user.get("activityLog", [])
     cf_scores = np.zeros(len(course_df))
-
     if logs:
         df_logs = pd.DataFrame([
             {"courseId": clean_object_id(log.get("courseId")), "score": 1.5 if log.get("action") == "completed_quiz" else 1.0}
             for log in logs
         ])
         df_logs = df_logs.groupby("courseId").mean().reset_index()
-
         for idx, cid in enumerate(course_df["_id"].astype(str)):
             match = df_logs[df_logs["courseId"] == cid]
             if not match.empty:
                 cf_scores[idx] = match["score"].values[0]
 
-    # ------------------------------
-    # ⚖️ Step 4: Weighted Hybrid Scoring
-    # ------------------------------
+    # hybrid score
     hybrid_scores = 0.65 * content_scores + 0.35 * cf_scores
 
-    # ------------------------------
-    # 🎚️ Step 5: Difficulty Weight
-    # ------------------------------
+    # difficulty weight
     preferred_diff = user.get("preferences", {}).get("difficulty", "")
     if preferred_diff:
         diff_boost = course_df["difficulty"].apply(
@@ -207,9 +199,7 @@ def get_hybrid_recommendations(user, courses):
         )
         hybrid_scores *= diff_boost
 
-    # ------------------------------
-    # 🧊 Step 6: Cold Start Fallback
-    # ------------------------------
+    # fallback if cold start
     if not np.any(hybrid_scores):
         print("⚠️ Cold start triggered — returning top 5 popular or new courses.")
         if "rating" in course_df.columns:
@@ -218,28 +208,20 @@ def get_hybrid_recommendations(user, courses):
             fallback = course_df.sort_values("createdAt", ascending=False).head(5)
         else:
             fallback = course_df.head(5)
-
         fallback["_id"] = fallback["_id"].apply(clean_object_id)
-        fallback = fallback[fallback["_id"].apply(lambda x: isinstance(x, str) and len(x) >= 12)]
         return fallback.to_dict(orient="records")
 
-    # ------------------------------
-    # 🏁 Step 7: Rank, Validate, Clean IDs
-    # ------------------------------
+    # rank + clean
     course_df["score"] = hybrid_scores
     top = course_df.sort_values("score", ascending=False).head(5)
     top["_id"] = top["_id"].apply(clean_object_id)
-
-    # Filter out invalid IDs (length < 10, empty, NaN)
-    top = top[top["_id"].apply(lambda x: isinstance(x, str) and len(x.strip()) >= 10)]
+    top = top[top["_id"].apply(lambda x: isinstance(x, str) and len(x) >= 12)]
 
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user.get("preferences", {}).get("topics", []))
     print("User Goals:", user.get("preferences", {}).get("goals", []))
-    print("Normalized:", user_text)
     print("Preferred Difficulty:", preferred_diff)
-    print("Total Valid Courses:", len(course_df))
-    print("Top 5 Courses:", top[["title", "_id", "score"]].to_dict(orient="records"))
+    print("Top 5 IDs:", top["_id"].tolist())
     print("========================================\n")
 
     return top.to_dict(orient="records")
@@ -255,12 +237,9 @@ async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Heade
 
     try:
         recs = get_hybrid_recommendations(req.user, req.courses)
-
-        # 🧹 Ensure IDs are fully cleaned
         for r in recs:
             r["_id"] = clean_object_id(r.get("_id", ""))
         recs = [r for r in recs if r.get("_id") and len(str(r["_id"])) >= 10]
-
         return {"success": True, "recommended": recs}
     except Exception as e:
         print("❌ Recommender Error:", str(e))

@@ -13,7 +13,6 @@ import uvicorn
 import os
 import traceback
 import re
-import ast  # ✅ to safely parse stringified dicts
 
 # ======================
 # ⚙️ FastAPI setup
@@ -43,53 +42,55 @@ class RecommendationRequest(BaseModel):
 
 
 # ======================
-# 🧩 Helper — Clean IDs safely (final, robust version)
+# 🧩 Helper — Clean Mongo ObjectIDs safely and recursively
 # ======================
 def clean_object_id(value):
-    """Ensure Mongo-like ObjectIDs, Buffers, or stringified dicts become consistent 24-char hex strings."""
+    """
+    Safely extract a Mongo ObjectId (24-char hex) from any nested or stringified structure.
+    Handles cases like:
+      - {"$oid": "..."}
+      - {"_id": {"$oid": "..."}}
+      - "ObjectId('...')"
+      - nested dicts with courseId, buffer, etc.
+    """
     try:
-        if value is None:
+        if not value:
             return ""
 
-        # 🧠 If it's a stringified dict, safely parse it first
-        if isinstance(value, str) and value.strip().startswith("{") and "$oid" in value:
-            try:
-                parsed = ast.literal_eval(value)
-                if isinstance(parsed, dict):
-                    value = parsed
-            except Exception:
-                pass  # if parsing fails, continue with raw string
+        # 1️⃣ String case
+        if isinstance(value, str):
+            # remove wrappers like ObjectId('...')
+            val = re.sub(r"[^0-9a-fA-F]", "", value)
+            return val if len(val) == 24 else ""
 
-        # 🧩 Handle dicts containing Mongo formats
+        # 2️⃣ Dict case
         if isinstance(value, dict):
             if "$oid" in value:
                 return str(value["$oid"])
-            elif "_id" in value:
+            if "_id" in value:
                 return clean_object_id(value["_id"])
-            elif "buffer" in value and "data" in value["buffer"]:
+            if "courseId" in value:
+                return clean_object_id(value["courseId"])
+            if "buffer" in value and isinstance(value["buffer"], dict):
                 data = value["buffer"].get("data", [])
                 try:
                     hexid = "".join(format(x, "02x") for x in data)
                     return hexid if len(hexid) == 24 else ""
                 except Exception:
-                    return ""
-            elif "courseId" in value:
-                return clean_object_id(value["courseId"])
+                    pass
 
-        # 🧩 Handle plain ObjectId strings
-        if isinstance(value, str):
-            val = value.strip()
-            # if looks like hex ObjectId
-            if len(val) == 24 and all(c in "0123456789abcdef" for c in val.lower()):
-                return val
-            # if still contains $oid inside the string (edge case)
-            match = re.search(r"'?\$oid'?:\s*'([0-9a-f]{24})'", val)
-            if match:
-                return match.group(1)
-            return val
+            # recursive fallback: search any nested dict values
+            for v in value.values():
+                possible = clean_object_id(v)
+                if possible:
+                    return possible
+            return ""
 
-        # fallback
-        return str(value)
+        # 3️⃣ Unexpected types (numeric, list, etc.)
+        s = str(value)
+        val = re.sub(r"[^0-9a-fA-F]", "", s)
+        return val if len(val) == 24 else ""
+
     except Exception as e:
         print(f"⚠️ clean_object_id error: {e} | value={value}")
         return ""
@@ -99,6 +100,7 @@ def clean_object_id(value):
 # 🧩 Normalize user topics & goals
 # ======================
 def normalize_user_text(user):
+    """Normalize messy topic/goal words into semantic clusters for TF-IDF."""
     prefs = user.get("preferences", {})
     topics = [t.lower().strip() for t in prefs.get("topics", [])]
     goals = [g.lower().strip() for g in prefs.get("goals", [])]
@@ -137,9 +139,11 @@ def get_hybrid_recommendations(user, courses):
         print("⚠️ No courses provided.")
         return []
 
+    # ------------------------------
+    # 🧱 Step 1: Normalize course data
+    # ------------------------------
     course_df = pd.DataFrame(courses)
 
-    # normalize column names
     def normalize_column(df, old, new):
         if old in df.columns and new not in df.columns:
             df[new] = df[old]
@@ -148,14 +152,11 @@ def get_hybrid_recommendations(user, courses):
     normalize_column(course_df, "courseDescription", "description")
     normalize_column(course_df, "courseTags", "tags")
 
-    # 🧹 Clean all IDs safely
+    # 🔧 Clean all IDs safely
     if "_id" in course_df.columns:
         course_df["_id"] = course_df["_id"].apply(clean_object_id)
 
-    # sanity log: show first 3 course IDs received
-    print("🧩 First 3 course IDs received:", list(course_df["_id"].head(3)))
-
-    # fill missing cols
+    # Fill missing columns
     for col in ["title", "description", "tags", "difficulty"]:
         if col not in course_df.columns:
             course_df[col] = ""
@@ -167,31 +168,42 @@ def get_hybrid_recommendations(user, courses):
         course_df["tags"].apply(lambda x: " ".join(x))
     )
 
-    # content-based similarity
+    # ------------------------------
+    # 🧩 Step 2: Content-Based Filtering
+    # ------------------------------
     vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), max_features=7000)
     tfidf_matrix = vectorizer.fit_transform(course_df["combined_text"])
+
     user_text = normalize_user_text(user)
     user_vector = vectorizer.transform([user_text])
     content_scores = cosine_similarity(user_vector, tfidf_matrix).flatten()
 
-    # collaborative filtering
+    # ------------------------------
+    # 🤝 Step 3: Collaborative Filtering
+    # ------------------------------
     logs = user.get("activityLog", [])
     cf_scores = np.zeros(len(course_df))
+
     if logs:
         df_logs = pd.DataFrame([
             {"courseId": clean_object_id(log.get("courseId")), "score": 1.5 if log.get("action") == "completed_quiz" else 1.0}
             for log in logs
         ])
         df_logs = df_logs.groupby("courseId").mean().reset_index()
+
         for idx, cid in enumerate(course_df["_id"].astype(str)):
             match = df_logs[df_logs["courseId"] == cid]
             if not match.empty:
                 cf_scores[idx] = match["score"].values[0]
 
-    # hybrid score
+    # ------------------------------
+    # ⚖️ Step 4: Weighted Hybrid Scoring
+    # ------------------------------
     hybrid_scores = 0.65 * content_scores + 0.35 * cf_scores
 
-    # difficulty weight
+    # ------------------------------
+    # 🎚️ Step 5: Difficulty Weight
+    # ------------------------------
     preferred_diff = user.get("preferences", {}).get("difficulty", "")
     if preferred_diff:
         diff_boost = course_df["difficulty"].apply(
@@ -199,29 +211,39 @@ def get_hybrid_recommendations(user, courses):
         )
         hybrid_scores *= diff_boost
 
-    # fallback if cold start
+    # ------------------------------
+    # 🧊 Step 6: Cold Start Fallback
+    # ------------------------------
     if not np.any(hybrid_scores):
-        print("⚠️ Cold start triggered — returning top 5 popular or new courses.")
+        print("⚠️ Cold start triggered — returning top 5 fallback courses.")
         if "rating" in course_df.columns:
             fallback = course_df.sort_values("rating", ascending=False).head(5)
         elif "createdAt" in course_df.columns:
             fallback = course_df.sort_values("createdAt", ascending=False).head(5)
         else:
             fallback = course_df.head(5)
+
         fallback["_id"] = fallback["_id"].apply(clean_object_id)
+        fallback = fallback[fallback["_id"].apply(lambda x: isinstance(x, str) and len(x) == 24)]
         return fallback.to_dict(orient="records")
 
-    # rank + clean
+    # ------------------------------
+    # 🏁 Step 7: Rank, Validate, Clean IDs
+    # ------------------------------
     course_df["score"] = hybrid_scores
     top = course_df.sort_values("score", ascending=False).head(5)
     top["_id"] = top["_id"].apply(clean_object_id)
-    top = top[top["_id"].apply(lambda x: isinstance(x, str) and len(x) >= 12)]
+
+    # Filter valid Mongo IDs (exactly 24 hex chars)
+    top = top[top["_id"].apply(lambda x: isinstance(x, str) and len(x) == 24)]
 
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user.get("preferences", {}).get("topics", []))
     print("User Goals:", user.get("preferences", {}).get("goals", []))
+    print("Normalized:", user_text)
     print("Preferred Difficulty:", preferred_diff)
-    print("Top 5 IDs:", top["_id"].tolist())
+    print("Total Courses:", len(course_df))
+    print("Top 5 Results:", top[['_id', 'title', 'score']].to_dict(orient='records'))
     print("========================================\n")
 
     return top.to_dict(orient="records")
@@ -237,9 +259,12 @@ async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Heade
 
     try:
         recs = get_hybrid_recommendations(req.user, req.courses)
+
+        # 🧹 Final cleaning for IDs before response
         for r in recs:
             r["_id"] = clean_object_id(r.get("_id", ""))
-        recs = [r for r in recs if r.get("_id") and len(str(r["_id"])) >= 10]
+        recs = [r for r in recs if r.get("_id") and len(str(r["_id"])) == 24]
+
         return {"success": True, "recommended": recs}
     except Exception as e:
         print("❌ Recommender Error:", str(e))

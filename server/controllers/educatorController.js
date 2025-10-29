@@ -280,13 +280,29 @@ export const getCoursesByEducator = async (req, res) => {
   try {
     const educatorId = req.params.id;
 
-    const educator = await Educator.findById(educatorId).select("name email imageUrl");
-    if (!educator) {
-      return res.json({ success: false, message: "Educator not found" });
+    // 1️⃣ Get educator info from Clerk
+    let educator = null;
+    try {
+      const clerkUser = await clerkClient.users.getUser(educatorId);
+      educator = {
+        _id: educatorId,
+        name: clerkUser.firstName
+          ? `${clerkUser.firstName} ${clerkUser.lastName || ""}`.trim()
+          : clerkUser.username || "Educator",
+        email: clerkUser.emailAddresses?.[0]?.emailAddress || "N/A",
+        imageUrl: clerkUser.imageUrl || null,
+      };
+    } catch (err) {
+      console.warn("Educator not found in Clerk:", err.message);
     }
 
-    const courses = await Course.find({ "educator._id": educatorId })
+    // 2️⃣ Get all courses linked to this educator
+    const courses = await Course.find({ educator: educatorId })
       .select("courseTitle coursePrice discount courseThumbnail courseRatings enrolledStudents");
+
+    if (!educator && courses.length === 0) {
+      return res.json({ success: false, message: "Educator not found" });
+    }
 
     res.json({ success: true, educator, courses });
   } catch (error) {

@@ -82,6 +82,8 @@ function normalizePreferences(preferences) {
 export const getRecommendations = async (req, res) => {
   try {
     const userId = req.auth.userId;
+
+    // ⚡ Always get fresh user data with courses
     const userDoc = await User.findOne({ _id: userId })
       .populate("enrolledCourses")
       .lean();
@@ -92,6 +94,7 @@ export const getRecommendations = async (req, res) => {
     console.log("🧠 Live User Preferences (fresh from DB):", userDoc.preferences);
     console.log("👤 Enrolled Courses:", userDoc.enrolledCourses?.length || 0);
 
+    // 🧩 Preserve preferences BEFORE cleaning
     const preservedPreferences = {
       topics: Array.isArray(userDoc.preferences?.topics)
         ? [...userDoc.preferences.topics]
@@ -102,6 +105,7 @@ export const getRecommendations = async (req, res) => {
       difficulty: userDoc.preferences?.difficulty || "",
     };
 
+    // 🔧 Clean MongoDB formatting
     const user = cleanMongoObject(userDoc);
     const allCourses = await Course.find({ isPublished: true }).lean();
     const courses = allCourses.map((c) => cleanMongoObject(c));
@@ -112,10 +116,10 @@ export const getRecommendations = async (req, res) => {
       ? Object.values(user.enrolledCourses)
       : [];
 
-    // ✅ Restore preserved preferences (normalized)
+    // ✅ Restore normalized preferences
     user.preferences = normalizePreferences(preservedPreferences);
 
-    // 🧩 Fill in missing data with intelligent defaults
+    // ✅ Fill missing preferences
     if (!Array.isArray(user.preferences.topics) || user.preferences.topics.length === 0) {
       const topicPool = [];
       enrolledCoursesArray.forEach((course) => {
@@ -134,6 +138,7 @@ export const getRecommendations = async (req, res) => {
       user.preferences.difficulty = "intermediate";
     }
 
+    // 🧩 Add fallback activity logs for new users
     if (!user.activityLog?.length && enrolledCoursesArray?.length) {
       user.activityLog = enrolledCoursesArray.map((course) => ({
         action: "watched",
@@ -143,9 +148,11 @@ export const getRecommendations = async (req, res) => {
       }));
     }
 
+    // 🔍 Deep log before Python call
     console.log("🧩 Final Preferences Sent to Python:", user.preferences);
     console.log("📚 Activity Count:", user.activityLog?.length || 0);
 
+    // 🚀 Send to Python recommender
     const { data } = await axios.post(
       `${PYTHON_API}/recommend`,
       { user, courses },
@@ -160,34 +167,39 @@ export const getRecommendations = async (req, res) => {
       "courses"
     );
 
+    // 🧼 Handle and clean recommender response
     if (data.success && data.recommended?.length > 0) {
       const cleanedRecommendations = data.recommended
         .map((course, i) => {
           let cleanId = course._id;
+
           try {
-            if (!cleanId) cleanId = course.id || course.courseId || "";
-            else if (typeof cleanId === "object") {
+            // Normalize deeply nested or malformed IDs
+            if (typeof cleanId === "object" && cleanId !== null) {
               if (cleanId.$oid) cleanId = cleanId.$oid;
+              else if (cleanId._id && cleanId._id.$oid) cleanId = cleanId._id.$oid;
               else if (cleanId.buffer?.data)
                 cleanId = Buffer.from(cleanId.buffer.data).toString("hex");
-              else cleanId = JSON.stringify(cleanId);
+              else cleanId = "";
             }
-            cleanId = String(cleanId).trim();
-            if (
-  !cleanId ||
-  typeof cleanId !== "string" ||
-  cleanId.toLowerCase().includes("object") ||
-  cleanId.toLowerCase().includes("none") ||
-  cleanId.toLowerCase().includes("nan")
-) {
-  console.warn("⚠️ Skipping invalid course ID:", cleanId);
-  return null;
-}
 
+            cleanId = String(cleanId || "").trim();
+
+            if (
+              !cleanId ||
+              cleanId.toLowerCase().includes("object") ||
+              cleanId.toLowerCase().includes("none") ||
+              cleanId.toLowerCase().includes("nan") ||
+              cleanId === "{}"
+            ) {
+              console.warn(`⚠️ Skipping invalid course ID at index ${i}:`, cleanId);
+              return null;
+            }
           } catch (err) {
             console.warn(`⚠️ ID cleaning failed for course index ${i}:`, err.message);
             return null;
           }
+
           return { ...course, _id: cleanId };
         })
         .filter(Boolean);

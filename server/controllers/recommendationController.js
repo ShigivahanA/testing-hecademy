@@ -105,28 +105,50 @@ export const getRecommendations = async (req, res) => {
       "courses"
     );
 
-    if (data.success && data.recommended?.length > 0) {
+ if (data.success && data.recommended?.length > 0) {
   // 🧹 Clean all IDs returned from Python recommender
-  const cleanedRecommendations = data.recommended.map((course) => {
+  const cleanedRecommendations = data.recommended.map((course, i) => {
     let cleanId = course._id;
 
-    if (typeof cleanId === "object") {
-      if (cleanId.$oid) {
-        cleanId = cleanId.$oid;
-      } else if (cleanId.buffer) {
-        cleanId = Buffer.from(cleanId.buffer.data || []).toString("hex") || "";
-      } else {
-        cleanId = JSON.stringify(cleanId);
+    try {
+      if (!cleanId) {
+        // fallback — maybe the course had no ID
+        cleanId = course.id || course.courseId || `fallback_${i}`;
+      } else if (typeof cleanId === "object") {
+        if (cleanId.$oid) {
+          cleanId = cleanId.$oid;
+        } else if (cleanId.buffer?.data) {
+          cleanId = Buffer.from(cleanId.buffer.data).toString("hex");
+        } else if (cleanId.data) {
+          // Sometimes _id might come as { data: [..] }
+          cleanId = Buffer.from(cleanId.data).toString("hex");
+        } else {
+          cleanId = JSON.stringify(cleanId);
+        }
       }
+
+      // Ensure clean string always
+      cleanId = String(cleanId).trim();
+
+      // Guard: remove invalid strings (like "[object Object]" or empty)
+      if (!cleanId || cleanId.includes("object") || cleanId.length < 5) {
+        cleanId = `fallback_${i}`;
+      }
+    } catch (err) {
+      console.warn(`⚠️ ID cleaning failed for course index ${i}:`, err.message);
+      cleanId = `fallback_${i}`;
     }
 
-    return { ...course, _id: String(cleanId) };
+    return { ...course, _id: cleanId };
   });
 
-  console.log("🧼 Cleaned Recommendation IDs:", cleanedRecommendations.map(c => c._id));
+  console.log(
+    "🧼 Cleaned Recommendation IDs:",
+    cleanedRecommendations.map((c) => c._id)
+  );
+
   return res.json({ success: true, recommended: cleanedRecommendations });
 }
-
 
     console.warn("⚠️ No personalized matches — returning fallback.");
     const fallback = await Course.find({ isPublished: true })

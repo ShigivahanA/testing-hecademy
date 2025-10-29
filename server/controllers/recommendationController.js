@@ -139,25 +139,44 @@ export const getRecommendations = async (req, res) => {
     }
 
     // 🧩 Add fallback activity logs for new users
-    if (!user.activityLog?.length && enrolledCoursesArray?.length) {
-      user.activityLog = enrolledCoursesArray.map((course) => ({
-        action: "watched",
-        courseId: course._id,
-        details: {},
-        timestamp: new Date(),
-      }));
+if (!user.activityLog?.length && enrolledCoursesArray?.length) {
+  user.activityLog = enrolledCoursesArray.map((course) => ({
+    action: "watched",
+    courseId: course._id,
+    details: {},
+    timestamp: new Date(),
+  }));
+}
+
+// 🧼 FIX: Ensure string IDs before sending to Python
+for (const course of courses) {
+  if (course._id && typeof course._id !== "string") {
+    try {
+      course._id = String(course._id);
+    } catch {
+      course._id = "";
     }
+  }
+}
 
-    // 🔍 Deep log before Python call
-    console.log("🧩 Final Preferences Sent to Python:", user.preferences);
-    console.log("📚 Activity Count:", user.activityLog?.length || 0);
+if (user.activityLog?.length) {
+  user.activityLog = user.activityLog.map((log) => ({
+    ...log,
+    courseId: log.courseId ? String(log.courseId) : "",
+  }));
+}
 
-    // 🚀 Send to Python recommender
-    const { data } = await axios.post(
-      `${PYTHON_API}/recommend`,
-      { user, courses },
-      { timeout: 10000 }
-    );
+// 🔍 Deep log before Python call
+console.log("🧩 Final Preferences Sent to Python:", user.preferences);
+console.log("📚 Activity Count:", user.activityLog?.length || 0);
+
+// 🚀 Send to Python recommender
+const { data } = await axios.post(
+  `${PYTHON_API}/recommend`,
+  { user, courses },
+  { timeout: 10000 }
+);
+
 
     console.log(
       "📥 Recommender Response:",

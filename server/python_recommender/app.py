@@ -128,52 +128,25 @@ def get_hybrid_recommendations(user, courses):
     normalize_column(course_df, "courseTags", "tags")
 
     # ✅ Robust ID cleaning (handles dict, NaN, buffer, etc.)
-        # ✅ Robust ID cleaning (handles dicts, ObjectId, Buffer, NaN, etc.)
     def fix_id(v):
-        """Deeply extract ID strings from any nested or malformed structure."""
         if isinstance(v, dict):
             if "$oid" in v:
-                return str(v["$oid"])
-            if "_id" in v:
+                return v["$oid"]
+            elif "_id" in v:
                 return fix_id(v["_id"])
-            if "courseId" in v:
-                return fix_id(v["courseId"])
-            if "buffer" in v and isinstance(v["buffer"], dict):
-                data = v["buffer"].get("data", [])
+            elif "buffer" in v and "data" in v["buffer"]:
                 try:
-                    return "".join(format(x, "02x") for x in data)
+                    return "".join(format(x, "02x") for x in v["buffer"]["data"])
                 except Exception:
-                    return str(data)
-            # if nothing matches, recursively flatten
-            return str(next(iter(v.values()), ""))
-        if isinstance(v, (bytes, bytearray)):
-            return v.hex()
-        if isinstance(v, str):
-            return v.strip()
-        if v is None:
-            return ""
-        return str(v)
-
-    # 🧼 FIX: clean IDs BEFORE DataFrame creation
-    for c in courses:
-        if "_id" in c:
-            c["_id"] = fix_id(c["_id"])
-
-    course_df = pd.DataFrame(courses)
-
-    if "_id" not in course_df.columns:
-        course_df["_id"] = ""
-
-    # 🧼 FIX: clean IDs AFTER DataFrame creation too
-    course_df["_id"] = course_df["_id"].apply(fix_id)
+                    return str(v["buffer"]["data"])
+        if isinstance(v, str) and len(v) >= 12:
+            return v
+        return str(v or "").strip()
 
     if "_id" in course_df.columns:
-        course_df["_id"] = course_df["_id"].apply(lambda v: fix_id(v) if not isinstance(v, str) else v)
+        course_df["_id"] = course_df["_id"].apply(fix_id)
     else:
         course_df["_id"] = [fix_id(c.get("_id", "")) for c in courses]
-
-    # ✅ NEW: forcefully clean again after Pandas conversion
-    course_df["_id"] = course_df["_id"].apply(lambda v: fix_id(v))
 
     # Fill missing columns
     for col in ["title", "description", "tags", "difficulty"]:
@@ -258,11 +231,7 @@ def get_hybrid_recommendations(user, courses):
 
     # ✅ Final cleanup — ensure string IDs
     for r in recs:
-        if isinstance(r.get("_id"), dict):
-            r["_id"] = fix_id(r["_id"])
-        elif not isinstance(r["_id"], str) or "[object" in r["_id"]:
-            r["_id"] = fix_id(r["_id"])
-
+        r["_id"] = fix_id(r.get("_id"))
 
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user.get("preferences", {}).get("topics", []))
@@ -283,8 +252,7 @@ async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Heade
 
     try:
         recs = get_hybrid_recommendations(req.user, req.courses)
-        for r in recs:
-            r["_id"] = clean_object_id(r.get("_id", ""))
+
         return {"success": True, "recommended": recs}
     except Exception as e:
         print("❌ Recommender Error:", str(e))

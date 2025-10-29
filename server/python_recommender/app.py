@@ -1,5 +1,5 @@
 # ===========================================
-# 🚀 Hecademy Hybrid Recommender Service (v1.5)
+# 🚀 Hecademy Hybrid Recommender Service (v1.6)
 # ===========================================
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
@@ -20,7 +20,7 @@ import re
 app = FastAPI(
     title="Hecademy Hybrid Recommender API",
     description="Hybrid engine combining content-based, collaborative, and difficulty weighting.",
-    version="1.5.0"
+    version="1.6.0"
 )
 
 app.add_middleware(
@@ -42,40 +42,47 @@ class RecommendationRequest(BaseModel):
 
 
 # ======================
-# 🧩 Helper — Clean IDs safely (robust version)
+# 🧩 Helper — Clean ObjectIDs robustly
 # ======================
-def clean_object_id(value):
-    """Ensure Mongo-like ObjectIDs or Buffers become consistent strings."""
-    if value is None:
+def fix_id(v):
+    """Recursively flatten ObjectIDs, Buffers, or nested dicts into clean string IDs."""
+    if v is None:
         return ""
-    if isinstance(value, dict):
-        if "$oid" in value:
-            return str(value["$oid"])
-        elif "_id" in value:
-            return clean_object_id(value["_id"])
-        elif "courseId" in value:
-            return clean_object_id(value["courseId"])
-        elif "buffer" in value and "data" in value["buffer"]:
-            data = value["buffer"].get("data", [])
+    if isinstance(v, dict):
+        # Mongo-style {"$oid": "..."}
+        if "$oid" in v:
+            return str(v["$oid"])
+        # Nested _id fields
+        if "_id" in v:
+            return fix_id(v["_id"])
+        # Node.js Buffer object
+        if "buffer" in v and "data" in v["buffer"]:
+            data = v["buffer"].get("data", [])
             try:
                 return "".join(format(x, "02x") for x in data)
             except Exception:
                 return str(data)
-        else:
-            for k, v in value.items():
-                if isinstance(v, dict) and "$oid" in v:
-                    return str(v["$oid"])
-            return str(value)
-    if isinstance(value, str) and len(value) == 24 and all(c in "0123456789abcdef" for c in value.lower()):
-        return value
-    return str(value)
+        # Numeric key dicts like {"0": {...}, "1": {...}}
+        for key, val in v.items():
+            if isinstance(val, dict) and "$oid" in val:
+                return str(val["$oid"])
+            if isinstance(val, str) and len(val) >= 12 and all(c in "0123456789abcdef" for c in val.lower()):
+                return val
+        # Default flatten
+        return str(v)
+    if isinstance(v, (list, tuple, set)):
+        return ", ".join(str(x) for x in v)
+    if isinstance(v, (bytes, bytearray)):
+        return v.hex()
+    if isinstance(v, str):
+        return v.strip()
+    return str(v)
 
 
 # ======================
 # 🧩 Normalize user topics & goals
 # ======================
 def normalize_user_text(user):
-    """Normalize messy topic/goal words into semantic clusters for TF-IDF."""
     prefs = user.get("preferences", {})
     topics = [t.lower().strip() for t in prefs.get("topics", [])]
     goals = [g.lower().strip() for g in prefs.get("goals", [])]
@@ -115,9 +122,16 @@ def get_hybrid_recommendations(user, courses):
         return []
 
     # ------------------------------
-    # 🧱 Step 1: Normalize course data
+    # 🧱 Step 1: Pre-clean IDs before DataFrame
     # ------------------------------
+    for c in courses:
+        if "_id" in c:
+            c["_id"] = fix_id(c["_id"])
+
     course_df = pd.DataFrame(courses)
+    if "_id" not in course_df.columns:
+        course_df["_id"] = ""
+    course_df["_id"] = course_df["_id"].apply(fix_id)
 
     def normalize_column(df, old, new):
         if old in df.columns and new not in df.columns:
@@ -127,33 +141,16 @@ def get_hybrid_recommendations(user, courses):
     normalize_column(course_df, "courseDescription", "description")
     normalize_column(course_df, "courseTags", "tags")
 
-    # ✅ Robust ID cleaning (handles dict, NaN, buffer, etc.)
-    def fix_id(v):
-        if isinstance(v, dict):
-            if "$oid" in v:
-                return v["$oid"]
-            elif "_id" in v:
-                return fix_id(v["_id"])
-            elif "buffer" in v and "data" in v["buffer"]:
-                try:
-                    return "".join(format(x, "02x") for x in v["buffer"]["data"])
-                except Exception:
-                    return str(v["buffer"]["data"])
-        if isinstance(v, str) and len(v) >= 12:
-            return v
-        return str(v or "").strip()
-
-    if "_id" in course_df.columns:
-        course_df["_id"] = course_df["_id"].apply(fix_id)
-    else:
-        course_df["_id"] = [fix_id(c.get("_id", "")) for c in courses]
-
     # Fill missing columns
     for col in ["title", "description", "tags", "difficulty"]:
         if col not in course_df.columns:
             course_df[col] = ""
 
     course_df["tags"] = course_df["tags"].apply(lambda x: x if isinstance(x, list) else [])
+
+    # ------------------------------
+    # 🧩 Step 2: Build combined course text safely
+    # ------------------------------
     course_df["combined_text"] = (
         course_df["title"].astype(str)
         + " "
@@ -162,10 +159,25 @@ def get_hybrid_recommendations(user, courses):
         + course_df["tags"].apply(lambda x: " ".join(x))
     )
 
+    # 🧼 Clean HTML tags and strip
+    course_df["combined_text"] = course_df["combined_text"].replace(
+        to_replace=r"<.*?>", value="", regex=True
+    ).str.strip()
+
+    # 🧩 Fallback for empty text
+    course_df["combined_text"] = course_df["combined_text"].apply(
+        lambda t: t if isinstance(t, str) and len(t.strip()) > 3 else "untitled course content"
+    )
+
+    # 🚨 Vocabulary safety check
+    if course_df["combined_text"].isna().all() or not any(course_df["combined_text"].str.strip()):
+        print("⚠️ All course text empty — returning fallback recommendations.")
+        return course_df.head(5).to_dict(orient="records")
+
     # ------------------------------
-    # 🧩 Step 2: Content-Based Filtering
+    # 🧩 Step 3: Content-Based Filtering
     # ------------------------------
-    vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), max_features=7000)
+    vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), max_features=7000, min_df=1)
     tfidf_matrix = vectorizer.fit_transform(course_df["combined_text"])
 
     user_text = normalize_user_text(user)
@@ -173,7 +185,7 @@ def get_hybrid_recommendations(user, courses):
     content_scores = cosine_similarity(user_vector, tfidf_matrix).flatten()
 
     # ------------------------------
-    # 🤝 Step 3: Collaborative Filtering
+    # 🤝 Step 4: Collaborative Filtering (Activity-based)
     # ------------------------------
     logs = user.get("activityLog", [])
     cf_scores = np.zeros(len(course_df))
@@ -191,12 +203,12 @@ def get_hybrid_recommendations(user, courses):
                 cf_scores[idx] = match["score"].values[0]
 
     # ------------------------------
-    # ⚖️ Step 4: Weighted Hybrid Scoring
+    # ⚖️ Step 5: Weighted Hybrid Scoring
     # ------------------------------
     hybrid_scores = 0.65 * content_scores + 0.35 * cf_scores
 
     # ------------------------------
-    # 🎚️ Step 5: Difficulty Weight
+    # 🎚️ Step 6: Difficulty Weight
     # ------------------------------
     preferred_diff = user.get("preferences", {}).get("difficulty", "")
     if preferred_diff:
@@ -206,7 +218,7 @@ def get_hybrid_recommendations(user, courses):
         hybrid_scores *= diff_boost
 
     # ------------------------------
-    # 🧊 Step 6: Cold Start Fallback
+    # 🧊 Step 7: Cold Start Fallback
     # ------------------------------
     if not np.any(hybrid_scores):
         print("⚠️ Cold start triggered — returning top 5 popular or new courses.")
@@ -216,12 +228,11 @@ def get_hybrid_recommendations(user, courses):
             fallback = course_df.sort_values("createdAt", ascending=False).head(5)
         else:
             fallback = course_df.head(5)
-
         fallback["_id"] = fallback["_id"].apply(fix_id)
         return fallback.to_dict(orient="records")
 
     # ------------------------------
-    # 🏁 Step 7: Rank, Clean, Return
+    # 🏁 Step 8: Rank, Clean, Return
     # ------------------------------
     course_df["score"] = hybrid_scores
     top = course_df.sort_values("score", ascending=False).head(5)
@@ -229,9 +240,12 @@ def get_hybrid_recommendations(user, courses):
 
     recs = top.to_dict(orient="records")
 
-    # ✅ Final cleanup — ensure string IDs
+    # ✅ Final cleanup
     for r in recs:
-        r["_id"] = fix_id(r.get("_id"))
+        if not isinstance(r.get("_id"), str):
+            r["_id"] = fix_id(r["_id"])
+        if "[object" in str(r["_id"]):
+            r["_id"] = fix_id(r["_id"])
 
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user.get("preferences", {}).get("topics", []))
@@ -241,6 +255,7 @@ def get_hybrid_recommendations(user, courses):
     print("========================================\n")
 
     return recs
+
 
 # ======================
 # 🔗 API Endpoint
@@ -252,7 +267,6 @@ async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Heade
 
     try:
         recs = get_hybrid_recommendations(req.user, req.courses)
-
         return {"success": True, "recommended": recs}
     except Exception as e:
         print("❌ Recommender Error:", str(e))
@@ -265,5 +279,5 @@ async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Heade
 # ======================
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5001))
-    print(f"🚀 Starting Hecademy Hybrid Recommender on port {port}")
+    print(f"🚀 Starting Hecademy Hybrid Recommender v1.6 on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port)

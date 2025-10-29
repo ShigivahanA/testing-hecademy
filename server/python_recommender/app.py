@@ -1,5 +1,5 @@
 # ===========================================
-# 🚀 Hecademy Hybrid Recommender Service (v1.3)
+# 🚀 Hecademy Hybrid Recommender Service (v1.4)
 # ===========================================
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
@@ -19,18 +19,18 @@ import traceback
 app = FastAPI(
     title="Hecademy Hybrid Recommender API",
     description="Combines content-based, collaborative, and difficulty-weighted filtering.",
-    version="1.3.0"
+    version="1.4.0"
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or restrict later to your backend domain
+    allow_origins=["*"],  # TODO: restrict to backend domain later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Optional API key (set this in your environment if needed)
+# Optional API key (set via env)
 API_KEY = os.getenv("RECOMMENDER_API_KEY")
 
 
@@ -40,6 +40,26 @@ API_KEY = os.getenv("RECOMMENDER_API_KEY")
 class RecommendationRequest(BaseModel):
     user: dict
     courses: list
+
+
+# ======================
+# 🧩 Helper — Clean IDs safely
+# ======================
+def clean_object_id(value):
+    """Ensure Mongo-like ObjectIDs or Buffers become plain strings."""
+    if isinstance(value, dict):
+        if "$oid" in value:
+            return str(value["$oid"])
+        elif "buffer" in value and "data" in value["buffer"]:
+            # Convert Buffer data (list of bytes) to hex string
+            data = value["buffer"].get("data", [])
+            try:
+                return "".join(format(x, "02x") for x in data)
+            except Exception:
+                return str(data)
+        else:
+            return str(value)
+    return str(value)
 
 
 # ======================
@@ -59,26 +79,20 @@ def get_hybrid_recommendations(user, courses):
         if old in df.columns and new not in df.columns:
             df[new] = df[old]
 
-    # Handle alternate field names
     normalize_column(course_df, "courseTitle", "title")
     normalize_column(course_df, "courseDescription", "description")
     normalize_column(course_df, "courseTags", "tags")
 
-    # Clean MongoDB-style ObjectIDs
+    # Clean IDs
     if "_id" in course_df.columns:
-        course_df["_id"] = course_df["_id"].apply(
-            lambda x: x.get("$oid") if isinstance(x, dict) and "$oid" in x else str(x)
-        )
+        course_df["_id"] = course_df["_id"].apply(clean_object_id)
 
-    # Fill missing essential columns
+    # Fill missing essentials
     for col in ["title", "description", "tags", "difficulty"]:
         if col not in course_df.columns:
             course_df[col] = ""
 
-    # Ensure tags are lists
     course_df["tags"] = course_df["tags"].apply(lambda x: x if isinstance(x, list) else [])
-
-    # Combine fields for TF-IDF vectorization
     course_df["combined_text"] = (
         course_df["title"].astype(str) + " " +
         course_df["description"].astype(str) + " " +
@@ -94,13 +108,13 @@ def get_hybrid_recommendations(user, courses):
     user_prefs = user.get("preferences", {})
     user_text = " ".join(user_prefs.get("topics", []) + user_prefs.get("goals", []))
     if not user_text.strip():
-        user_text = "learning education"  # fallback text
+        user_text = "learning education"
 
     user_vector = vectorizer.transform([user_text])
     content_scores = cosine_similarity(user_vector, tfidf_matrix).flatten()
 
     # ------------------------------
-    # 🤝 Step 3: Collaborative Filtering (fixed)
+    # 🤝 Step 3: Collaborative Filtering
     # ------------------------------
     activity_logs = []
     for log in user.get("activityLog", []):
@@ -109,30 +123,25 @@ def get_hybrid_recommendations(user, courses):
             score += log.get("details", {}).get("score", 0) / 100
         elif log.get("action") == "watched":
             score += 0.5
-        activity_logs.append({"courseId": log.get("courseId"), "score": score})
+        activity_logs.append({
+            "courseId": clean_object_id(log.get("courseId")),
+            "score": score
+        })
 
     if activity_logs:
         df_activity = pd.DataFrame(activity_logs)
-        df_activity["courseId"] = df_activity["courseId"].apply(
-            lambda x: x.get("$oid") if isinstance(x, dict) and "$oid" in x else str(x)
-        )
         df_activity = df_activity.groupby("courseId").mean().reset_index()
 
         all_course_ids = course_df["_id"].astype(str).tolist()
         user_vector_cf = np.zeros(len(all_course_ids))
 
-        # Build user-course engagement vector
         for idx, cid in enumerate(all_course_ids):
             if cid in df_activity["courseId"].values:
                 user_vector_cf[idx] = df_activity[df_activity["courseId"] == cid]["score"].values[0]
 
-        # Compute collaborative similarity:
-        # Create a weighted "user profile" from courses user engaged with
         if np.sum(user_vector_cf) > 0:
             user_profile_vector = np.dot(user_vector_cf, tfidf_matrix.toarray()) / (np.sum(user_vector_cf) + 1e-6)
-            collaborative_scores = cosine_similarity(
-                [user_profile_vector], tfidf_matrix.toarray()
-            ).flatten()
+            collaborative_scores = cosine_similarity([user_profile_vector], tfidf_matrix.toarray()).flatten()
         else:
             collaborative_scores = np.zeros(len(course_df))
     else:
@@ -144,14 +153,14 @@ def get_hybrid_recommendations(user, courses):
     hybrid_scores = 0.6 * content_scores + 0.4 * collaborative_scores
 
     # ------------------------------
-    # 🎚️ Step 5: Difficulty Preference Boost
+    # 🎚️ Step 5: Difficulty Boost
     # ------------------------------
     preferred_diff = user_prefs.get("difficulty", "")
     if preferred_diff:
         diff_boost = course_df["difficulty"].apply(
             lambda d: 1.1 if str(d).lower() == preferred_diff.lower() else 1.0
         )
-        hybrid_scores = hybrid_scores * diff_boost
+        hybrid_scores *= diff_boost
 
     # ------------------------------
     # 🧊 Step 6: Cold Start Fallback
@@ -167,14 +176,15 @@ def get_hybrid_recommendations(user, courses):
         return top_courses.to_dict(orient="records")
 
     # ------------------------------
-    # 🏁 Step 7: Rank and Return
+    # 🏁 Step 7: Rank + Clean IDs
     # ------------------------------
     course_df["score"] = hybrid_scores
     top_courses = course_df.sort_values("score", ascending=False).head(5)
+    top_courses["_id"] = top_courses["_id"].apply(clean_object_id)
 
-    # Debugging logs
     print("\n✅ ===== Recommendation Debug Info =====")
     print("User Topics:", user_prefs.get("topics", []))
+    print("Preferred Difficulty:", preferred_diff)
     print("Total Courses:", len(course_df))
     print("Top Results:", top_courses[["title", "score"]].to_dict(orient="records"))
     print("========================================\n")
@@ -187,12 +197,14 @@ def get_hybrid_recommendations(user, courses):
 # ======================
 @app.post("/recommend")
 async def recommend(req: RecommendationRequest, x_api_key: Optional[str] = Header(None)):
-    # Optional security check
     if API_KEY and x_api_key != API_KEY:
         raise HTTPException(status_code=403, detail="Invalid or missing API key")
 
     try:
         recommendations = get_hybrid_recommendations(req.user, req.courses)
+        # Final cleaning pass before returning
+        for r in recommendations:
+            r["_id"] = clean_object_id(r.get("_id", ""))
         return {"success": True, "recommended": recommendations}
     except Exception as e:
         print("❌ Recommender Error:", str(e))

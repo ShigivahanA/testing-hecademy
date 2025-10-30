@@ -109,11 +109,11 @@ const CoursesList = () => {
             ) : recommendationError ? (
               <div className="p-6 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800 animate-pulse">
                 <h3 className="font-semibold text-lg">
-                  ⚙️ Recommendation engine is waking up...
+                  Recommendation engine is waking up...
                 </h3>
                 <p className="text-sm mt-1">
                   The service might be in a cold start. Please check back in a
-                  minute while our AI recommender warms up.
+                  minute while our recommendation engine warms up.
                 </p>
               </div>
             ) : recommendations && recommendations.length > 0 ? (

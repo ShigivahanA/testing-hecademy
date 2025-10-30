@@ -75,7 +75,7 @@ if (!certificate) {
   // ✅ Valid certificate
   return (
     <>
-      <div className="min-h-screen bg-gray-50 px-6 py-16 flex flex-col items-center">
+      <div className="min-h-screen bg-gradient-to-b from-cyan-100/70 via-white to-white px-6 py-16 flex flex-col items-center">
         <div className="bg-white shadow-xl rounded-xl p-10 w-full max-w-4xl border-t-8 border-green-600">
           <div className="flex flex-col items-center text-center">
             <CheckCircle className="w-16 h-16 text-green-600 mb-4" />

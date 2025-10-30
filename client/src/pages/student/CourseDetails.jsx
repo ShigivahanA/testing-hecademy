@@ -136,7 +136,7 @@ const CourseDetails = () => {
 
   return courseData ? (
     <>
-    <div className="relative w-full overflow-x-hidden">
+    <div className="relative w-full overflow-x-hidden ">
       <div className="container mx-auto px-6 md:px-12 lg:px-20 xl:px-28 pt-10 lg:pt-20 flex flex-col-reverse lg:flex-row gap-10 items-start justify-between text-left">
         <div className="absolute top-0 left-0 w-full h-section-height -z-1 bg-gradient-to-b from-cyan-100/70"></div>
 

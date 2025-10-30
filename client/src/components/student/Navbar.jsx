@@ -44,9 +44,9 @@ const { user, isLoaded } = useUser();      // 👈 add isLoaded
   return (
      <div
     className={`w-full flex items-center justify-between px-6 sm:px-10 md:px-14 lg:px-20 py-4 
-    rounded-lg shadow-md transition-all duration-300
+     shadow-md transition-all duration-300
     ${isCoursesListPage 
-      ? 'bg-white backdrop-blur-md border border-gray-200' 
+      ? 'bg-cyan-100/70 backdrop-blur-md border border-gray-200' 
       : 'bg-cyan-100/70 backdrop-blur-md border border-gray-200'
     }`}
   >

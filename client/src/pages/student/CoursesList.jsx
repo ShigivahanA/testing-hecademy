@@ -1,62 +1,83 @@
-import React, { useContext, useEffect, useState } from 'react'
-import Footer from '../../components/student/Footer'
-import { assets } from '../../assets/assets'
-import CourseCard from '../../components/student/CourseCard'
-import { AppContext } from '../../context/AppContext'
-import { useParams } from 'react-router-dom'
-import SearchBar from '../../components/student/SearchBar'
-import Loading from '../../components/student/Loading'
+import React, { useContext, useEffect, useState } from "react";
+import Footer from "../../components/student/Footer";
+import { assets } from "../../assets/assets";
+import CourseCard from "../../components/student/CourseCard";
+import { AppContext } from "../../context/AppContext";
+import { useParams } from "react-router-dom";
+import SearchBar from "../../components/student/SearchBar";
+import Loading from "../../components/student/Loading";
 
 const CoursesList = () => {
-  const { input } = useParams()
-  const { allCourses, navigate, backendUrl,loadingRecommendations , userData, recommendations, fetchRecommendations, isEducator } = useContext(AppContext)
+  const { input } = useParams();
+  const {
+    allCourses,
+    navigate,
+    backendUrl,
+    loadingRecommendations,
+    userData,
+    recommendations,
+    fetchRecommendations,
+    isEducator,
+  } = useContext(AppContext);
 
-  const [filteredCourse, setFilteredCourse] = useState([])
-  const [loading, setLoading] = useState(true); // for course list loader
-
+  const [filteredCourse, setFilteredCourse] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [recommendationError, setRecommendationError] = useState(false); // ❗ fallback trigger
 
   // ✅ Filter course list based on search input
   useEffect(() => {
     if (allCourses && allCourses.length > 0) {
-      const tempCourses = allCourses.slice()
+      const tempCourses = allCourses.slice();
       const updated = input
-        ? tempCourses.filter(item =>
+        ? tempCourses.filter((item) =>
             item.courseTitle.toLowerCase().includes(input.toLowerCase())
           )
-        : tempCourses
+        : tempCourses;
 
-      setFilteredCourse(updated)
+      setFilteredCourse(updated);
 
-      // ⏳ keep loader visible for 2 seconds
       const timer = setTimeout(() => {
-        setLoading(false)
-      }, 1500)
+        setLoading(false);
+      }, 1500);
 
-      return () => clearTimeout(timer)
+      return () => clearTimeout(timer);
     }
-  }, [allCourses, input])
+  }, [allCourses, input]);
 
+  // ✅ Fetch recommendations safely
   useEffect(() => {
-  if (userData && !isEducator) {
-    fetchRecommendations();
-  }
-}, [userData, isEducator]);
+    const fetchSafely = async () => {
+      try {
+        setRecommendationError(false);
+        if (userData && !isEducator) {
+          await fetchRecommendations();
+        }
+      } catch (err) {
+        console.warn("⚠️ Recommendation fetch failed:", err.message);
+        setRecommendationError(true);
+      }
+    };
+    fetchSafely();
+  }, [userData, isEducator]);
 
   if (loading) {
-    return <Loading /> // 👈 show loading first
+    return <Loading />;
   }
 
   return (
     <>
-      <div className="relative md:px-36 px-8 pt-20 text-left">
+      <div className="relative md:px-36 px-8 pt-20 text-left bg-gradient-to-b from-cyan-100/70 via-white to-white">
         {/* Header */}
-        <div className="flex md:flex-row flex-col gap-6 items-start justify-between w-full">
+        <div className="flex md:flex-row flex-col gap-6 items-start justify-between w-full ">
           <div>
             <h1 className="text-4xl font-semibold text-gray-800">Course List</h1>
             <p className="text-gray-500">
-              <span onClick={() => navigate('/')} className="text-blue-600 cursor-pointer">
+              <span
+                onClick={() => navigate("/")}
+                className="text-blue-600 cursor-pointer"
+              >
                 Home
-              </span>{' '}
+              </span>{" "}
               / <span>Course List</span>
             </p>
           </div>
@@ -68,40 +89,54 @@ const CoursesList = () => {
           <div className="inline-flex items-center gap-4 px-4 py-2 border mt-8 -mb-8 text-gray-600">
             <p>{input}</p>
             <img
-              onClick={() => navigate('/course-list')}
+              onClick={() => navigate("/course-list")}
               className="cursor-pointer"
               src={assets.cross_icon}
               alt=""
             />
           </div>
         )}
-        {/* ✅ Recommendations Only if User is Logged In */}
-        {userData && !isEducator && (
-  <div className="my-16">
-    <h2 className="text-2xl font-semibold mb-6 text-gray-800">
-      Recommended for You
-    </h2>
 
-    {loadingRecommendations ? (
-      <Loading /> // ⏳ Show loading while fetching recommendations
-    ) : recommendations && recommendations.length > 0 ? (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-2 md:p-0">
-        {recommendations.map((course, index) => (
-          <CourseCard key={String(course._id || index)} course={course} />
-        ))}
-      </div>
-    ) : (
-      <p className="text-gray-500 text-lg">
-        No recommended courses based on your interests. Please explore our course list.
-      </p>
-    )}
-  </div>
-)}
+        {/* ✅ Recommendations Section */}
+        {userData && !isEducator && (
+          <div className="my-16">
+            <h2 className="text-2xl font-semibold mb-6 text-gray-800">
+              Recommended for You
+            </h2>
+
+            {loadingRecommendations ? (
+              <Loading />
+            ) : recommendationError ? (
+              <div className="p-6 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800 animate-pulse">
+                <h3 className="font-semibold text-lg">
+                  ⚙️ Recommendation engine is waking up...
+                </h3>
+                <p className="text-sm mt-1">
+                  The service might be in a cold start. Please check back in a
+                  minute while our AI recommender warms up.
+                </p>
+              </div>
+            ) : recommendations && recommendations.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-2 md:p-0">
+                {recommendations.map((course, index) => (
+                  <CourseCard key={String(course._id || index)} course={course} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-lg">
+                No recommended courses based on your interests. Please explore our
+                course list.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* ✅ Normal Course List */}
         <div className="my-16">
           <h2 className="text-2xl font-semibold mb-6 text-gray-800">
-            {userData && !isEducator ? "Courses You Might Like" : "Courses in Hecademy"}
+            {userData && !isEducator
+              ? "Courses You Might Like"
+              : "Courses in Hecademy"}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-2 md:p-0">
             {filteredCourse.map((course, index) => (
@@ -109,11 +144,11 @@ const CoursesList = () => {
             ))}
           </div>
         </div>
-
       </div>
+
       <Footer />
     </>
-  )
-}
+  );
+};
 
-export default CoursesList
+export default CoursesList;

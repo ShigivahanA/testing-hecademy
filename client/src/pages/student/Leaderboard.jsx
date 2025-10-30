@@ -88,7 +88,7 @@ const Leaderboard = () => {
   // 🏆 Leaderboard Display
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-b from-cyan-100/70 py-12 sm:py-16 px-5 sm:px-10 lg:px-32 transition-all">
+      <div className="min-h-screen bg-gradient-to-b from-cyan-100/70 via-white to-white py-12 sm:py-16 px-5 sm:px-10 lg:px-32 transition-all">
         {/* Header */}
         <div className="text-center mb-10 sm:mb-14">
           <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-800 mb-2 tracking-tight">

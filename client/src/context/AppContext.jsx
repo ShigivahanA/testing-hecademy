@@ -177,14 +177,12 @@ const fetchUserData = async () => {
     const token = await getToken();
     if (!token) return;
 
-    // ✅ Use backend API that internally calls Python recommender
     const { data } = await axios.post(
       `${backendUrl}/api/recommendations/user`,
       {},
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    // ✅ Fallback if Node fails to connect to Python
     if (!data.success && pybackendUrl) {
       console.warn("⚠️ Node recommender unavailable — hitting Python directly...");
       const userResponse = await axios.get(`${backendUrl}/api/user/data`, {
@@ -206,7 +204,6 @@ const fetchUserData = async () => {
       }
     }
 
-    // ✅ Normal successful case
     if (data.success && data.recommended?.length > 0) {
       setRecommendations(data.recommended);
     } else {
@@ -216,10 +213,14 @@ const fetchUserData = async () => {
   } catch (error) {
     console.error("❌ Recommendation error:", error.message);
     toast.error("Failed to fetch recommendations.");
+
+    // ✅ This line ensures CoursesList detects a failure
+    throw error;
   } finally {
     setLoadingRecommendations(false);
   }
 };
+
 
 
 useEffect(() => {

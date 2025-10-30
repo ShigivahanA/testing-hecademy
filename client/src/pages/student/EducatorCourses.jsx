@@ -63,7 +63,7 @@ const EducatorCourses = () => {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen to-white w-full bg-gradient-to-b from-cyan-100/70">
+      <div className="min-h-screen to-white w-full bg-gradient-to-b from-cyan-100/70 via-white to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 lg:px-20 pt-20 pb-16">
           {/* Educator Info */}
           {educator && (

@@ -76,7 +76,7 @@ const Feedback = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-b from-cyan-100/70 px-6 py-12">
+    <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-b from-cyan-100/70 via-white to-white px-6 py-12">
       <div className="w-full max-w-lg  p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">

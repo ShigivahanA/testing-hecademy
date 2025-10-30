@@ -137,13 +137,13 @@ const MyEnrollments = () => {
 
   return (
     <>
-      <div className="md:px-36 px-8 pt-10">
+      <div className="md:px-36 px-8 pt-10 bg-gradient-to-b from-cyan-100/70 via-white to-white">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold">My Enrollments</h1>
           {!isEducator && (
             <button
               onClick={() => setShowModal(true)}
-              className="px-3 py-2 rounded-lg text-black text-sm font-medium hover:text-blue-700"
+              className="px-3 py-2 rounded-lg text-black text-sm font-medium hover:text-cyan-600"
             >
               Change Preferences
             </button>
@@ -156,7 +156,7 @@ const MyEnrollments = () => {
             onClick={() => setActiveTab("ongoing")}
             className={`px-4 py-2 rounded-lg text-sm font-medium ${
               activeTab === "ongoing"
-                ? "bg-blue-600 text-white"
+                ? "bg-cyan-400 text-white"
                 : "bg-gray-200 text-gray-700"
             }`}
           >
@@ -180,8 +180,8 @@ const MyEnrollments = () => {
   <div className="space-y-4">
     {/* Desktop Table */}
     <div className="hidden md:block">
-      <table className="w-full border-[0.5px] rounded-lg border-gray-500/20 shadow-md">
-        <thead className="text-gray-900 border-b border-gray-500/20 text-sm">
+      <table className="w-full rounded-lg shadow-md overflow-hidden">
+        <thead className="text-gray-900 bg-gradient-to-b from-cyan-100/70 border-b border-gray-500/20 text-sm">
           <tr>
             <th className="px-4 py-3 text-left">Course</th>
             <th className="px-4 py-3 text-left">Duration</th>
@@ -297,8 +297,8 @@ const MyEnrollments = () => {
   <div className="space-y-4">
     {/* Desktop Table */}
     <div className="hidden md:block">
-      <table className="w-full border border-gray-200 rounded-lg shadow-md overflow-hidden">
-        <thead className="bg-gray-100 text-gray-900 text-sm">
+      <table className="w-full rounded-lg shadow-md overflow-hidden">
+        <thead className="bg-gray-100 text-gray-900 text-sm bg-gradient-to-b from-cyan-100/70">
           <tr>
             <th className="px-4 py-3 text-left font-semibold">Course</th>
             <th className="px-4 py-3 text-left font-semibold">Completed on</th>

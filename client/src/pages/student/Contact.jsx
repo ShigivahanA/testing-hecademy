@@ -48,7 +48,7 @@ const Contact = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-b from-cyan-100/70 py-10 px-6 md:px-36 text-gray-700">
+      <div className="min-h-screen bg-gradient-to-b from-cyan-100/70 via-white to-white py-10 px-6 md:px-36 text-gray-700">
         <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
           Contact Us
         </h1>
@@ -62,7 +62,7 @@ const Contact = () => {
         </p>
 
         {/* Contact Form */}
-        <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-lg border border-gray-100 p-8 sm:p-10 mb-20">
+        <div className="max-w-3xl mx-auto bg-gradient-to-b from-cyan-100/70 via-white to-white rounded-3xl shadow-lg border border-gray-100 p-8 sm:p-10 mb-20">
           <h2 className="text-xl font-semibold mb-6 text-gray-800 text-center">
             Send us a Message
           </h2>

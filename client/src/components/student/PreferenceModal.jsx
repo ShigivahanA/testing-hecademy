@@ -73,14 +73,14 @@ const PreferenceModal = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-50 px-4">
-      <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl w-full max-w-md md:max-w-lg text-left relative overflow-hidden p-5 md:p-6 rounded-b-xl">
+      <div className="bg-cyan-100/70 rounded-xl w-full max-w-md md:max-w-lg text-left relative overflow-hidden p-5 md:p-6 shadow-xl">
         {/* Header */}
         <h2 className="text-lg md:text-xl font-semibold text-white px-6 py-4 text-center">
           {isUpdating ? "Update Your Learning Preferences" : "Set Your Learning Preferences"}
         </h2>
 
         {/* Topics */}
-        <label className="text-white block mb-2 text-sm font-medium">Topics</label>
+        <label className="text-black block mb-2 text-sm font-medium">Topics</label>
         <select
           defaultValue=""
           className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-black mb-2 text-sm md:text-base"
@@ -118,7 +118,7 @@ const PreferenceModal = ({ onClose }) => {
         )}
 
         {/* Difficulty */}
-        <label className="text-white block mt-4 mb-2 text-sm font-medium">Difficulty</label>
+        <label className="text-black block mt-4 mb-2 text-sm font-medium">Difficulty</label>
         <select
           value={difficulty}
           className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-black mb-2 text-sm md:text-base"
@@ -131,7 +131,7 @@ const PreferenceModal = ({ onClose }) => {
         </select>
 
         {/* Goals */}
-        <label className="text-white block mt-4 mb-2 text-sm font-medium">Goals</label>
+        <label className="text-black block mt-4 mb-2 text-sm font-medium">Goals</label>
         <select
           defaultValue=""
           className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-black mb-2 text-sm md:text-base"

@@ -169,7 +169,7 @@ button:hover {
 if (!userData) {
   return (
     <>
-      <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 text-gray-600 px-4">
+      <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-b from-cyan-100/70 via-white to-white text-gray-600 px-4">
         <div className="max-w-md text-center">
           <h1 className="text-2xl font-semibold mb-3 text-gray-800">
             Code Editor
@@ -192,7 +192,7 @@ if (!userData) {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-b from-cyan-50 to-gray-50 py-10 px-6 lg:px-36 transition-all">
+      <div className="min-h-screen bg-gradient-to-b from-cyan-100/70 via-white to-white py-10 px-6 lg:px-36 transition-all">
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
             <h1 className="text-3xl font-bold text-gray-800 tracking-tight">

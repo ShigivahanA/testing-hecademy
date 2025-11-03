@@ -32,6 +32,7 @@ import EducatorCourses from './pages/student/EducatorCourses'
 import TracksPage from './pages/student/TracksPage'
 import TrackDetail from './pages/student/TrackDetail'
 import NotFound from './pages/student/NotFound'
+import AITutorWidget from './components/student/AITutorWidget'
 
 const App = () => {
   const isEducatorRoute = useMatch('/educator/*')
@@ -104,6 +105,7 @@ const App = () => {
           <Route path="/tracks/:id" element={<TrackDetail />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <AITutorWidget />
       </div>
 
       <style>

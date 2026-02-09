@@ -73,12 +73,35 @@ export const startDiscussion = async (req, res) => {
         const link = `${process.env.FRONTEND_URL}/educator/student-questions`;;
         await sendEmail({
           to: educator.email,
-          subject: `New Question in ${course.courseTitle}`,
+          subject: `NODE_SIGNAL: New Question in ${course.courseTitle}`,
           html: `
-            <h2>Hello ${educator.name},</h2>
-            <p>A student just asked a new question in your course <b>${course.courseTitle}</b>.</p>
-            <a href="${link}" target="_blank" style="display:inline-block;padding:10px 16px;background:#2563eb;color:white;border-radius:8px;text-decoration:none;">View Discussion</a>
-            <p>— Hecademy Team</p>
+            <div style="font-family: 'Inter', system-ui, sans-serif; background-color: #F5F5F7; padding: 40px; color: #1D1616;">
+              <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid rgba(0,0,0,0.05); border-radius: 32px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.05);">
+                <div style="background-color: #1D1616; padding: 24px 40px; border-bottom: 4px solid #D84040;">
+                  <h1 style="color: #ffffff; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; margin: 0;">Transmission_Received</h1>
+                </div>
+                <div style="padding: 40px;">
+                  <h2 style="font-size: 24px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 8px;">Hello ${educator.name},</h2>
+                  <p style="font-size: 14px; font-weight: 500; color: rgba(0,0,0,0.6); line-height: 1.6; margin-bottom: 32px;">
+                    A student operative has initiated a new discussion thread in your archive. Action is requested to maintain synchronization.
+                  </p>
+                  <div style="background-color: #F5F5F7; border: 1px solid rgba(0,0,0,0.05); border-radius: 20px; padding: 24px; margin-bottom: 32px;">
+                    <div style="margin-bottom: 16px;">
+                      <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #D84040;">Target_Module</span>
+                      <h3 style="font-size: 16px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-top: 4px; margin-bottom: 0;">${course.courseTitle}</h3>
+                    </div>
+                    <div style="border-left: 3px solid rgba(0,0,0,0.1); padding-left: 16px;">
+                      <span style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: rgba(0,0,0,0.3);">Payload_Preview</span>
+                      <p style="font-size: 13px; font-weight: 500; font-style: italic; color: rgba(0,0,0,0.7); margin-top: 4px; margin-bottom: 0;">"${message.length > 100 ? message.substring(0, 100) + '...' : message}"</p>
+                    </div>
+                  </div>
+                  <a href="${link}" style="display: block; text-align: center; background-color: #1D1616; color: #ffffff; padding: 20px; border-radius: 16px; text-decoration: none; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em;">Access_Comms_Terminal</a>
+                  <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid rgba(0,0,0,0.05); text-align: center;">
+                    <span style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5em; color: rgba(0,0,0,0.2);">HECADEMY_OS_INTELLIGENCE</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           `,
         });
       }
@@ -132,12 +155,35 @@ export const replyToThread = async (req, res) => {
       const link = `${process.env.FRONTEND_URL}/player/${courseId}?lecture=${lectureId || ""}`;
       await sendEmail({
         to: originalPoster.email,
-        subject: `New Reply from Educator - ${course.courseTitle}`,
+        subject: `NODE_SIGNAL: Educator Response in ${course.courseTitle}`,
         html: `
-          <h2>Hello ${originalPoster.name},</h2>
-          <p>Your question in <b>${course.courseTitle}</b> just got a reply from your educator.</p>
-          <a href="${link}" target="_blank" style="display:inline-block;padding:10px 16px;background:#10b981;color:white;border-radius:8px;text-decoration:none;">View Reply</a>
-          <p>— Hecademy Team</p>
+          <div style="font-family: 'Inter', system-ui, sans-serif; background-color: #F5F5F7; padding: 40px; color: #1D1616;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid rgba(0,0,0,0.05); border-radius: 32px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.05);">
+              <div style="background-color: #22c55e; padding: 24px 40px; border-bottom: 4px solid #1D1616;">
+                <h1 style="color: #ffffff; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; margin: 0;">Synchronization_Complete</h1>
+              </div>
+              <div style="padding: 40px;">
+                <h2 style="font-size: 24px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 8px;">Hello ${originalPoster.name},</h2>
+                <p style="font-size: 14px; font-weight: 500; color: rgba(0,0,0,0.6); line-height: 1.6; margin-bottom: 32px;">
+                  The educator has synchronized a response to your discussion thread. Your nodal intelligence has been updated.
+                </p>
+                <div style="background-color: #F5F5F7; border: 1px solid rgba(0,0,0,0.05); border-radius: 20px; padding: 24px; margin-bottom: 32px;">
+                  <div style="margin-bottom: 16px;">
+                    <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #22c55e;">Target_Archive</span>
+                    <h3 style="font-size: 16px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-top: 4px; margin-bottom: 0;">${course.courseTitle}</h3>
+                  </div>
+                  <div style="border-left: 3px solid rgba(0,0,0,0.1); padding-left: 16px;">
+                    <span style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: rgba(0,0,0,0.3);">Response_Payload</span>
+                    <p style="font-size: 13px; font-weight: 500; font-style: italic; color: rgba(0,0,0,0.7); margin-top: 4px; margin-bottom: 0;">"${message.length > 100 ? message.substring(0, 100) + '...' : message}"</p>
+                  </div>
+                </div>
+                <a href="${link}" style="display: block; text-align: center; background-color: #1D1616; color: #ffffff; padding: 20px; border-radius: 16px; text-decoration: none; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em;">View_Full_Transmission</a>
+                <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid rgba(0,0,0,0.05); text-align: center;">
+                  <span style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5em; color: rgba(0,0,0,0.2);">HECADEMY_OS_INTELLIGENCE</span>
+                </div>
+              </div>
+            </div>
+          </div>
         `,
       });
     }
@@ -149,12 +195,35 @@ export const replyToThread = async (req, res) => {
         const link = `${process.env.FRONTEND_URL}/educator/student-questions`;
         await sendEmail({
           to: educator.email,
-          subject: `New Student Reply in ${course.courseTitle}`,
+          subject: `NODE_SIGNAL: New Student Reply in ${course.courseTitle}`,
           html: `
-            <h2>Hello ${educator.name},</h2>
-            <p>${replier?.name || "A student"} just replied to a discussion in your course <b>${course.courseTitle}</b>.</p>
-            <a href="${link}" target="_blank" style="display:inline-block;padding:10px 16px;background:#2563eb;color:white;border-radius:8px;text-decoration:none;">View Reply</a>
-            <p>— Hecademy Team</p>
+            <div style="font-family: 'Inter', system-ui, sans-serif; background-color: #F5F5F7; padding: 40px; color: #1D1616;">
+              <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid rgba(0,0,0,0.05); border-radius: 32px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.05);">
+                <div style="background-color: #1D1616; padding: 24px 40px; border-bottom: 4px solid #D84040;">
+                  <h1 style="color: #ffffff; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; margin: 0;">Transmission_Received</h1>
+                </div>
+                <div style="padding: 40px;">
+                  <h2 style="font-size: 24px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 8px;">Hello ${educator.name},</h2>
+                  <p style="font-size: 14px; font-weight: 500; color: rgba(0,0,0,0.6); line-height: 1.6; margin-bottom: 32px;">
+                    Student operative <b>${replier?.name || "Unknown"}</b> has added a reply to an existing discussion thread.
+                  </p>
+                  <div style="background-color: #F5F5F7; border: 1px solid rgba(0,0,0,0.05); border-radius: 20px; padding: 24px; margin-bottom: 32px;">
+                    <div style="margin-bottom: 16px;">
+                      <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: #D84040;">Target_Module</span>
+                      <h3 style="font-size: 16px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-top: 4px; margin-bottom: 0;">${course.courseTitle}</h3>
+                    </div>
+                    <div style="border-left: 3px solid rgba(0,0,0,0.1); padding-left: 16px;">
+                      <span style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2em; color: rgba(0,0,0,0.3);">Reply_Payload</span>
+                      <p style="font-size: 13px; font-weight: 500; font-style: italic; color: rgba(0,0,0,0.7); margin-top: 4px; margin-bottom: 0;">"${message.length > 100 ? message.substring(0, 100) + '...' : message}"</p>
+                    </div>
+                  </div>
+                  <a href="${link}" style="display: block; text-align: center; background-color: #1D1616; color: #ffffff; padding: 20px; border-radius: 16px; text-decoration: none; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.3em;">Access_Comms_Terminal</a>
+                  <div style="margin-top: 48px; padding-top: 24px; border-top: 1px solid rgba(0,0,0,0.05); text-align: center;">
+                    <span style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5em; color: rgba(0,0,0,0.2);">HECADEMY_OS_INTELLIGENCE</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           `,
         });
       }
